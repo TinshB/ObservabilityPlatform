@@ -1,0 +1,124 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: apm-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${APM_DB_NAME:mydatabase}
+    username: ${DB_USERNAME:myuser}
+    password: ${DB_PASSWORD:mypassword}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    table: flyway_schema_history
+    validate-on-migrate: false
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+
+# ── Redis caching (Story 9.8) ──────────────────────────────────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+
+  cache:
+    type: redis
+
+# ── SMTP / Email notifications (Story 10.5) ──────────────────────────────────
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:false}
+          starttls:
+            enable: ${SMTP_STARTTLS:false}
+
+# ── Actuator / Micrometer (expose Prometheus scrape endpoint) ──────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: apm-service
+
+# ── Prometheus ────────────────────────────────────────────────────────────────
+prometheus:
+  url: ${PROMETHEUS_URL:http://localhost:9090}
+  connect-timeout: 5000
+  read-timeout: 30000
+
+# ── Jaeger (trace queries — Story 7.2) ────────────────────────────────────────
+jaeger:
+  query-url: ${JAEGER_QUERY_URL:http://localhost:16686}
+  connect-timeout: 5000
+  read-timeout: 30000
+
+# ── Elasticsearch (log metrics — Story 6.3) ──────────────────────────────────
+elasticsearch:
+  url: ${ELASTICSEARCH_URL:http://localhost:3300}
+  log-index: ${ES_LOG_INDEX:logs-*}
+
+# ── Query metrics (slow-query threshold) ─────────────────────────────────────
+metrics:
+  slow-query-threshold-seconds: ${SLOW_QUERY_THRESHOLD:0.5}
+
+# ── Alert Engine (Story 10.2) ──────────────────────────────────────────────────
+alert:
+  evaluation-interval-ms: ${ALERT_EVAL_INTERVAL_MS:60000}
+
+# ── JWT configuration (must match user-management-service secret) ─────────────
+jwt:
+  secret: ${JWT_SECRET:bXktc3VwZXItc2VjcmV0LWtleS1mb3Itand0LXRva2VuLXNpZ25pbmctdGhhdC1pcy1sb25nLWVub3VnaC1mb3ItaG1hYy1zaGE1MTI=}
+
+# ── OpenAPI / Swagger UI ─────────────────────────────────────────────────────
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+logging:
+  level:
+    com.observability: DEBUG
+    org.springframework.security: INFO
+
+---
+# Production profile: structured JSON logging
+spring:
+  config:
+    activate:
+      on-profile: production
+
+logging:
+  level:
+    com.observability: INFO
+    org.springframework.security: WARN
+  pattern:
+    console: ""

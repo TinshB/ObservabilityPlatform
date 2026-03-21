@@ -1,0 +1,27 @@
+/* Tailwind directives — preflight disabled in tailwind.config.js to avoid MUI conflicts */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global box-sizing reset (safe alongside MUI since preflight is off) */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Smooth scrolling platform-wide */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Monospace font class for trace IDs, log lines, metric values */
+.font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+/* Utility: truncate long service names / trace IDs in table cells */
+.truncate-cell {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 0; /* works inside display:table-cell */
+}

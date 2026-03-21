@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="${report.reportName}">Performance Report</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #333; margin: 40px; font-size: 12px; }
+        h1 { color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 10px; }
+        h2 { color: #333; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .meta { color: #666; font-size: 11px; margin-bottom: 20px; }
+        .summary-grid { display: flex; gap: 15px; margin: 20px 0; flex-wrap: wrap; }
+        .summary-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; min-width: 120px; text-align: center; }
+        .summary-card .value { font-size: 20px; font-weight: bold; color: #1a73e8; }
+        .summary-card .label { font-size: 11px; color: #666; margin-top: 4px; }
+        .good { color: #2e7d32; }
+        .warn { color: #f9a825; }
+        .bad { color: #d32f2f; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th { background: #f1f3f4; color: #333; font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 2px solid #ddd; }
+        td { padding: 8px 10px; border-bottom: 1px solid #eee; }
+        tr:nth-child(even) { background: #fafafa; }
+        .section { margin-bottom: 25px; }
+        .footer { margin-top: 40px; padding-top: 15px; border-top: 1px solid #ddd; color: #999; font-size: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1 th:text="${report.reportName}">Performance Report</h1>
+    <div class="meta">
+        <p>Generated: <span th:text="${report.generatedAt}">2026-03-19T00:00:00Z</span></p>
+        <p>Time Range: <span th:text="${report.timeRangeStart}">start</span> to <span th:text="${report.timeRangeEnd}">end</span></p>
+        <p th:if="${report.serviceName != null}">Service: <span th:text="${report.serviceName}">all</span></p>
+    </div>
+
+    <!-- Latency Summary -->
+    <div class="section">
+        <h2>Latency Summary</h2>
+        <div class="summary-grid" th:if="${report.latencySummary != null}">
+            <div class="summary-card">
+                <div class="value" th:text="${#numbers.formatDecimal(report.latencySummary.p50Ms, 1, 1) + ' ms'}">25.3 ms</div>
+                <div class="label">P50</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" th:text="${#numbers.formatDecimal(report.latencySummary.p95Ms, 1, 1) + ' ms'}">120.5 ms</div>
+                <div class="label">P95</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" th:text="${#numbers.formatDecimal(report.latencySummary.p99Ms, 1, 1) + ' ms'}">350.8 ms</div>
+                <div class="label">P99</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" th:text="${#numbers.formatDecimal(report.latencySummary.avgMs, 1, 1) + ' ms'}">45.2 ms</div>
+                <div class="label">Average</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Throughput Summary -->
+    <div class="section">
+        <h2>Throughput Summary</h2>
+        <div class="summary-grid" th:if="${report.throughputSummary != null}">
+            <div class="summary-card">
+                <div class="value" th:text="${#numbers.formatDecimal(report.throughputSummary.avgRequestsPerSecond, 1, 1) + ' rps'}">150.0 rps</div>
+                <div class="label">Avg RPS</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" th:text="${#numbers.formatDecimal(report.throughputSummary.peakRequestsPerSecond, 1, 1) + ' rps'}">450.0 rps</div>
+                <div class="label">Peak RPS</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" th:text="${report.throughputSummary.totalRequests}">1250000</div>
+                <div class="label">Total Requests</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Budget -->
+    <div class="section">
+        <h2>Error Budget</h2>
+        <div class="summary-grid" th:if="${report.errorBudgetSummary != null}">
+            <div class="summary-card">
+                <div class="value" th:text="${#numbers.formatDecimal(report.errorBudgetSummary.errorRatePct, 1, 2) + '%'}">0.15%</div>
+                <div class="label">Error Rate</div>
+            </div>
+            <div class="summary-card">
+                <div class="value good" th:text="${#numbers.formatDecimal(report.errorBudgetSummary.errorBudgetRemainingPct, 1, 1) + '%'}">99.85%</div>
+                <div class="label">Budget Remaining</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" th:text="${report.errorBudgetSummary.totalErrors}">1875</div>
+                <div class="label">Total Errors</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" th:text="${report.errorBudgetSummary.totalRequests}">1250000</div>
+                <div class="label">Total Requests</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Infra Utilisation -->
+    <div class="section">
+        <h2>Infrastructure Utilisation</h2>
+        <div class="summary-grid" th:if="${report.infraUtilisation != null}">
+            <div class="summary-card">
+                <div class="value" th:text="${#numbers.formatDecimal(report.infraUtilisation.avgCpuPct, 1, 1) + '%'}">35.2%</div>
+                <div class="label">Avg CPU</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" th:text="${#numbers.formatDecimal(report.infraUtilisation.peakCpuPct, 1, 1) + '%'}">78.5%</div>
+                <div class="label">Peak CPU</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" th:text="${#numbers.formatDecimal(report.infraUtilisation.avgMemoryPct, 1, 1) + '%'}">62.3%</div>
+                <div class="label">Avg Memory</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" th:text="${#numbers.formatDecimal(report.infraUtilisation.peakMemoryPct, 1, 1) + '%'}">88.1%</div>
+                <div class="label">Peak Memory</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Latency Trends -->
+    <h2>Latency Trends</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>P50 (ms)</th>
+                <th>P95 (ms)</th>
+                <th>P99 (ms)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="trend : ${report.latencyTrends}">
+                <td th:text="${trend.timestamp}">2026-03-18T06:00:00Z</td>
+                <td th:text="${#numbers.formatDecimal(trend.p50Ms, 1, 1)}">25.3</td>
+                <td th:text="${#numbers.formatDecimal(trend.p95Ms, 1, 1)}">120.5</td>
+                <td th:text="${#numbers.formatDecimal(trend.p99Ms, 1, 1)}">350.8</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(report.latencyTrends)}">
+                <td colspan="4" style="text-align: center; color: #999;">No latency trend data available</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Throughput Trends -->
+    <h2>Throughput Trends</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Requests/sec</th>
+                <th>Error Rate %</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="trend : ${report.throughputTrends}">
+                <td th:text="${trend.timestamp}">2026-03-18T06:00:00Z</td>
+                <td th:text="${#numbers.formatDecimal(trend.requestsPerSecond, 1, 1)}">150.0</td>
+                <td th:text="${#numbers.formatDecimal(trend.errorRate, 1, 2)}">0.15</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(report.throughputTrends)}">
+                <td colspan="3" style="text-align: center; color: #999;">No throughput trend data available</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Top Slow Endpoints -->
+    <h2>Top Slow Endpoints</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Method</th>
+                <th>Path</th>
+                <th>Avg Latency (ms)</th>
+                <th>P99 Latency (ms)</th>
+                <th>Calls</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="ep : ${report.topSlowEndpoints}">
+                <td th:text="${ep.method}">GET</td>
+                <td th:text="${ep.path}">/api/v1/orders</td>
+                <td th:text="${#numbers.formatDecimal(ep.avgLatencyMs, 1, 1)}">250.0</td>
+                <td th:text="${#numbers.formatDecimal(ep.p99LatencyMs, 1, 1)}">980.5</td>
+                <td th:text="${ep.callCount}">15000</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(report.topSlowEndpoints)}">
+                <td colspan="5" style="text-align: center; color: #999;">No endpoint data available</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>Observability Platform &#8212; Performance Report &#8212; Auto-generated</p>
+    </div>
+</body>
+</html>

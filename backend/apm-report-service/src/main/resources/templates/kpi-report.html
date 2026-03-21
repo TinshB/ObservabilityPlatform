@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="${report.reportName}">KPI Report</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #333; margin: 40px; font-size: 12px; }
+        h1 { color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 10px; }
+        h2 { color: #333; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .meta { color: #666; font-size: 11px; margin-bottom: 20px; }
+        .summary-grid { display: flex; gap: 15px; margin: 20px 0; }
+        .summary-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; flex: 1; text-align: center; }
+        .summary-card .value { font-size: 24px; font-weight: bold; color: #1a73e8; }
+        .summary-card .label { font-size: 11px; color: #666; margin-top: 4px; }
+        .critical { color: #d32f2f; }
+        .warning { color: #f9a825; }
+        .info { color: #1565c0; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th { background: #f1f3f4; color: #333; font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 2px solid #ddd; }
+        td { padding: 8px 10px; border-bottom: 1px solid #eee; }
+        tr:nth-child(even) { background: #fafafa; }
+        .footer { margin-top: 40px; padding-top: 15px; border-top: 1px solid #ddd; color: #999; font-size: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1 th:text="${report.reportName}">KPI Report</h1>
+    <div class="meta">
+        <p>Generated: <span th:text="${report.generatedAt}">2026-03-19T00:00:00Z</span></p>
+        <p>Time Range: <span th:text="${report.timeRangeStart}">start</span> to <span th:text="${report.timeRangeEnd}">end</span></p>
+        <p th:if="${report.serviceName != null}">Service: <span th:text="${report.serviceName}">all</span></p>
+    </div>
+
+    <!-- Summary Cards -->
+    <h2>Summary</h2>
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="value" th:text="${#numbers.formatDecimal(report.overallSlaCompliancePct, 1, 1) + '%'}">99.5%</div>
+            <div class="label">SLA Compliance</div>
+        </div>
+        <div class="summary-card">
+            <div class="value" th:text="${report.totalAlerts}">42</div>
+            <div class="label">Total Alerts</div>
+        </div>
+        <div class="summary-card">
+            <div class="value critical" th:text="${report.criticalAlerts}">5</div>
+            <div class="label">Critical</div>
+        </div>
+        <div class="summary-card">
+            <div class="value warning" th:text="${report.warningAlerts}">15</div>
+            <div class="label">Warning</div>
+        </div>
+        <div class="summary-card">
+            <div class="value info" th:text="${report.infoAlerts}">22</div>
+            <div class="label">Info</div>
+        </div>
+    </div>
+
+    <!-- SLA Compliance Table -->
+    <h2>SLA Compliance Breakdown</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Service</th>
+                <th>SLA Rule</th>
+                <th>Compliance %</th>
+                <th>Evaluations</th>
+                <th>Breaches</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="entry : ${report.slaCompliance}">
+                <td th:text="${entry.serviceName}">order-service</td>
+                <td th:text="${entry.slaRuleName}">P99 Latency &lt; 500ms</td>
+                <td th:text="${#numbers.formatDecimal(entry.compliancePct, 1, 1) + '%'}">98.5%</td>
+                <td th:text="${entry.totalEvaluations}">1440</td>
+                <td th:text="${entry.breaches}">22</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(report.slaCompliance)}">
+                <td colspan="5" style="text-align: center; color: #999;">No SLA data available for this period</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Top Offending Services -->
+    <h2>Top Offending Services</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Service</th>
+                <th>Alert Count</th>
+                <th>Critical</th>
+                <th>Avg Resolution (min)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="svc : ${report.topOffendingServices}">
+                <td th:text="${svc.serviceName}">payment-service</td>
+                <td th:text="${svc.alertCount}">12</td>
+                <td class="critical" th:text="${svc.criticalCount}">3</td>
+                <td th:text="${#numbers.formatDecimal(svc.avgResolutionMinutes, 1, 1)}">45.2</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(report.topOffendingServices)}">
+                <td colspan="4" style="text-align: center; color: #999;">No alert data available</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Alert Trends -->
+    <h2>Alert Trends (Daily)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Critical</th>
+                <th>Warning</th>
+                <th>Info</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="trend : ${report.alertTrends}">
+                <td th:text="${trend.date}">2026-03-18</td>
+                <td class="critical" th:text="${trend.criticalCount}">2</td>
+                <td class="warning" th:text="${trend.warningCount}">5</td>
+                <td class="info" th:text="${trend.infoCount}">8</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(report.alertTrends)}">
+                <td colspan="4" style="text-align: center; color: #999;">No trend data available</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>Observability Platform &#8212; KPI Report &#8212; Auto-generated</p>
+    </div>
+</body>
+</html>

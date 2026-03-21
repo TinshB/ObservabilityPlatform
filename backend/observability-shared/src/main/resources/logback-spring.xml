@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         Development / non-prod profile — human-readable coloured output
+         ══════════════════════════════════════════════════════════════════ -->
+    <springProfile name="!prod">
+
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>
+                    %d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{40}) [traceId=%yellow(%X{traceId}) reqId=%X{requestId}] - %msg%n
+                </pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+
+        <!-- Platform code at DEBUG so developers see service-layer trace logs -->
+        <logger name="com.observability" level="DEBUG"/>
+
+    </springProfile>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         Production profile — structured JSON via logstash-logback-encoder
+         Each log line is a single-line JSON object consumable by Elasticsearch / Loki.
+         ══════════════════════════════════════════════════════════════════ -->
+    <springProfile name="prod">
+
+        <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <!-- MDC fields to include as top-level JSON keys -->
+                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <includeMdcKeyName>traceId</includeMdcKeyName>
+                <includeMdcKeyName>spanId</includeMdcKeyName>
+                <includeMdcKeyName>httpMethod</includeMdcKeyName>
+                <includeMdcKeyName>httpUri</includeMdcKeyName>
+
+                <fieldNames>
+                    <!-- Use @timestamp for Elasticsearch / Kibana compatibility -->
+                    <timestamp>@timestamp</timestamp>
+                    <!-- Suppress the default logstash @version field -->
+                    <version>[ignore]</version>
+                </fieldNames>
+
+                <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                    <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                    <maxLength>2048</maxLength>
+                    <shortenedClassNameLength>20</shortenedClassNameLength>
+                    <rootCauseFirst>true</rootCauseFirst>
+                </throwableConverter>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE"/>
+        </root>
+
+    </springProfile>
+
+</configuration>

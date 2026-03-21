@@ -1,0 +1,63 @@
+# ─── IDE ───────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ─── OS ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Java / Maven ─────────────────────────────────────────────
+backend/**/target/
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+replay_pid*
+
+# ─── Node / Frontend ──────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.storybook-out/
+frontend/storybook-static/
+frontend/coverage/
+*.tsbuildinfo
+
+# ─── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+venv/
+.venv/
+*.egg
+
+# ─── Environment & Secrets ────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+
+# ─── Logs ──────────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── Docker ────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── Reports / Generated ──────────────────────────────────────
+/reports/
+/tmp/
+
+# ─── Claude Code ───────────────────────────────────────────────
+.claude/

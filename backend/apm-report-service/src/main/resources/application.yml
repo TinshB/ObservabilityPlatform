@@ -1,0 +1,133 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: apm-report-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${REPORT_DB_NAME:mydatabase}
+    username: ${DB_USERNAME:myuser}
+    password: ${DB_PASSWORD:mypassword}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 3
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    table: flyway_schema_history
+    validate-on-migrate: false
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+
+# ── Redis (task queue tracking + caching — Story 14.1) ──────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+
+  cache:
+    type: redis
+
+# ── SMTP / Email delivery (Story 14.4) ──────────────────────────────────────
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:false}
+          starttls:
+            enable: ${SMTP_STARTTLS:false}
+
+# ── Thymeleaf (HTML report templates — Story 14.4) ──────────────────────────
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    cache: true
+
+# ── Actuator ──────────────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  metrics:
+    tags:
+      application: apm-report-service
+
+# ── Prometheus (metrics data source — Story 14.3) ────────────────────────────
+prometheus:
+  url: ${PROMETHEUS_URL:http://localhost:9090}
+  connect-timeout: 5000
+  read-timeout: 30000
+
+# ── Elasticsearch (alert/log data source — Story 14.2) ──────────────────────
+elasticsearch:
+  url: ${ELASTICSEARCH_URL:http://localhost:9200}
+  log-index: ${ES_LOG_INDEX:logs-*}
+  alert-index: ${ES_ALERT_INDEX:alerts-*}
+
+# ── JWT configuration (must match user-management-service secret) ────────────
+jwt:
+  secret: ${JWT_SECRET:bXktc3VwZXItc2VjcmV0LWtleS1mb3Itand0LXRva2VuLXNpZ25pbmctdGhhdC1pcy1sb25nLWVub3VnaC1mb3ItaG1hYy1zaGE1MTI=}
+
+# ── Report configuration ─────────────────────────────────────────────────────
+report:
+  storage-dir: ${REPORT_STORAGE_DIR:/tmp/reports}
+  retention-days: ${REPORT_RETENTION_DAYS:30}
+  email-from: ${REPORT_EMAIL_FROM:reports@observability-platform.local}
+  email-subject-prefix: ${REPORT_EMAIL_SUBJECT_PREFIX:[Observability Platform]}
+  scheduler:
+    check-interval-ms: ${REPORT_SCHEDULER_INTERVAL_MS:60000}
+    delivery-check-interval-ms: ${REPORT_DELIVERY_CHECK_INTERVAL_MS:30000}
+
+# ── Synthetic Monitoring (Story 14.5–14.6) ───────────────────────────────────
+synthetic:
+  scheduler:
+    check-interval-ms: ${SYNTHETIC_SCHEDULER_INTERVAL_MS:30000}
+
+# ── OpenAPI / Swagger UI ─────────────────────────────────────────────────────
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+logging:
+  level:
+    com.observability: DEBUG
+    org.springframework.security: INFO
+
+---
+# Production profile: structured JSON logging
+spring:
+  config:
+    activate:
+      on-profile: production
+
+logging:
+  level:
+    com.observability: INFO
+    org.springframework.security: WARN
+  pattern:
+    console: ""
