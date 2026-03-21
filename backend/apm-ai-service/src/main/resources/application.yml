@@ -36,7 +36,7 @@ ai:
     max-message-size: 10485760        # 10 MB
   llm:
     provider: ${LLM_PROVIDER:openai}                # "openai" (default) or "anthropic"
-    openai-api-key: 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               # Required when provider=openai
+    openai-api-key: ${key:key}               # Required when provider=openai
     openai-model: ${OPENAI_MODEL:gpt-4o}             # OpenAI model to use
     anthropic-api-key: ${ANTHROPIC_API_KEY:}          # Required when provider=anthropic
     anthropic-model: ${ANTHROPIC_MODEL:claude-sonnet-4-20250514}  # Anthropic model to use
