@@ -1,0 +1,36 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "user-management-service"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ["user-management-service:8081"]
+        labels:
+          service: "user-management"
+
+  - job_name: "apm-service"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ["apm-service:8082"]
+        labels:
+          service: "apm"
+
+  - job_name: "apm-report-service"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ["apm-report-service:8084"]
+        labels:
+          service: "apm-report"
+
+  - job_name: "apm-ai-service"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ["apm-ai-service:8085"]
+        labels:
+          service: "apm-ai"
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
