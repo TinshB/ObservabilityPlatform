@@ -59,7 +59,7 @@ function StackedBar({ op, traceDuration, color }: {
     >
       <Box sx={{ position: 'relative', height: 16, minWidth: 120 }}>
         {/* Background track */}
-        <Box sx={{ position: 'absolute', top: 6, left: 0, right: 0, height: 4, backgroundColor: 'grey.200', borderRadius: 2 }} />
+        <Box sx={{ position: 'absolute', top: 6, left: 0, right: 0, height: 4, backgroundColor: 'action.disabledBackground', borderRadius: 2 }} />
         {/* Total duration (lighter) */}
         <Box
           sx={{

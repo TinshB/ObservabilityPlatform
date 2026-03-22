@@ -153,7 +153,7 @@ function SpanLogsSection({ logs, serviceName }: { logs: LogEntry[]; serviceName:
       <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
         Logs ({serviceName})
       </Typography>
-      <Table size="small" sx={{ '& td, & th': { borderBottom: '1px solid', borderColor: 'grey.200', py: 0.4 } }}>
+      <Table size="small" sx={{ '& td, & th': { borderBottom: '1px solid', borderColor: 'divider', py: 0.4 } }}>
         <TableHead>
           <TableRow>
             <TableCell sx={{ fontWeight: 600, fontSize: '0.7rem', width: 160 }}>Timestamp</TableCell>
@@ -361,7 +361,7 @@ function SpanRow({
 
       {/* Expanded detail panel */}
       <Collapse in={expanded}>
-        <Box sx={{ pl: `${24 + node.depth * 20 + (node.depth > 0 ? 12 : 0)}px`, pr: 2, py: 1.5, backgroundColor: 'grey.50', borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ pl: `${24 + node.depth * 20 + (node.depth > 0 ? 12 : 0)}px`, pr: 2, py: 1.5, backgroundColor: 'action.hover', borderBottom: '1px solid', borderColor: 'divider' }}>
 
           {/* HTTP info */}
           {hasHttp && (
@@ -612,7 +612,7 @@ export default function TraceDetailPage() {
               variant="body2"
               sx={{
                 fontFamily: '"JetBrains Mono", monospace',
-                backgroundColor: 'grey.100',
+                backgroundColor: 'action.selected',
                 px: 1.5,
                 py: 0.5,
                 borderRadius: 1,
@@ -702,7 +702,7 @@ export default function TraceDetailPage() {
               px: 1,
               borderBottom: '2px solid',
               borderColor: 'divider',
-              backgroundColor: 'grey.50',
+              backgroundColor: 'action.hover',
             }}
           >
             <Typography
