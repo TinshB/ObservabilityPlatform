@@ -40,8 +40,8 @@ export default function PieChartRenderer({ data, options }: Props) {
           paddingAngle={2}
           dataKey="value"
           nameKey="name"
-          label={({ name, percent }: { name: string; percent?: number }) =>
-            `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+          label={({ name, percent }: { name?: string; percent?: number }) =>
+            `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`
           }
           labelLine={false}
           fontSize={11}
