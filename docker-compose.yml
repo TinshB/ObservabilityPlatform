@@ -164,7 +164,7 @@ services:
       - DB_USERNAME=${DB_USERNAME:-myuser}
       - DB_PASSWORD=${DB_PASSWORD:-mypassword}
       - JWT_SECRET=${JWT_SECRET}
-      - ELASTICSEARCH_URI=http://localhost:9200
+      - ELASTICSEARCH_URI=http://elasticsearch:9200
     networks:
       - obs-network
     depends_on:
@@ -203,9 +203,9 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - ELASTICSEARCH_URL=http://localhost:9200
-      - PROMETHEUS_URL=http://localhost:9090
-      - JAEGER_QUERY_URL=http://localhost:16686
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - PROMETHEUS_URL=http://prometheus:9090
+      - JAEGER_QUERY_URL=http://jaeger:16686
       - SMTP_HOST=mailhog
       - SMTP_PORT=1025
       - SMTP_AUTH=false
