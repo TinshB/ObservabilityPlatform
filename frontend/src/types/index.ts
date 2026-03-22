@@ -38,7 +38,7 @@ export interface FieldValidationError {
 
 // ── Auth / Users ──────────────────────────────────────────────────────────────
 
-export type UserRole = 'ADMIN' | 'OPERATOR' | 'VIEWER'
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'OPERATOR' | 'VIEWER'
 
 export interface User {
   id:        string
@@ -1036,4 +1036,156 @@ export interface SyntheticResult {
   errorMessage?:     string
   responseBodySnippet?: string
   executedAt:        string
+}
+
+// ── Billing (US-BILL-001) ───────────────────────────────────────────────────
+
+export interface IndexStorageDetail {
+  indexName:            string
+  storageSizeBytes:     number
+  storageSizeFormatted: string
+  documentCount:        number
+  primaryShardCount:    number
+  replicaShardCount:    number
+  totalShardCount:      number
+  costUsd:              number
+}
+
+export interface ElasticsearchStorageResponse {
+  totalStorageSizeBytes:     number
+  totalStorageSizeFormatted: string
+  totalDocumentCount:        number
+  indexCount:                number
+  costPerGbUsd:              number
+  totalCostUsd:              number
+  indices:                   IndexStorageDetail[]
+}
+
+// ── Billing (US-BILL-002) ───────────────────────────────────────────────────
+
+export interface ServiceSeriesDetail {
+  serviceName:              string
+  seriesCount:              number
+  seriesPercentage:         number
+  estimatedStorageBytes:    number
+  estimatedStorageFormatted: string
+  estimatedCostUsd:         number
+}
+
+export interface PrometheusStorageResponse {
+  totalStorageSizeBytes:     number
+  totalStorageSizeFormatted: string
+  totalActiveSeries:         number
+  totalLabelValuePairs:      number
+  retentionPeriod:           string
+  costPerGbUsd:              number
+  totalCostUsd:              number
+  services:                  ServiceSeriesDetail[]
+}
+
+// ── Billing (US-BILL-003) ───────────────────────────────────────────────────
+
+export interface ServiceSpanDetail {
+  serviceName:              string
+  spanCount:                number
+  traceCount:               number
+  spanPercentage:           number
+  estimatedStorageBytes:    number
+  estimatedStorageFormatted: string
+  estimatedCostUsd:         number
+}
+
+// ── Billing (US-BILL-004) ───────────────────────────────────────────────────
+
+export interface StorageSummaryResponse {
+  elasticsearchSizeBytes:     number
+  elasticsearchSizeFormatted: string
+  elasticsearchCostUsd:       number
+  prometheusSizeBytes:        number
+  prometheusSizeFormatted:    string
+  prometheusCostUsd:          number
+  jaegerSizeBytes:            number
+  jaegerSizeFormatted:        string
+  jaegerCostUsd:              number
+  totalSizeBytes:             number
+  totalSizeFormatted:         string
+  totalCostUsd:               number
+}
+
+// ── Billing (US-BILL-009) ───────────────────────────────────────────────────
+
+export interface LicenceTier {
+  id:              string
+  tierName:        string
+  userType:        string
+  monthlyCostUsd:  number
+  active:          boolean
+  createdAt:       string
+  updatedAt:       string
+}
+
+export interface CreateLicenceTierPayload {
+  tierName:       string
+  userType:       string
+  monthlyCostUsd: number
+}
+
+export interface UpdateLicenceTierPayload {
+  tierName?:       string
+  userType?:       string
+  monthlyCostUsd?: number
+  active?:         boolean
+}
+
+// ── Billing (US-BILL-010) ───────────────────────────────────────────────────
+
+export interface TierCostBreakdown {
+  tierName:           string
+  userType:           string
+  userCount:          number
+  costPerUserUsd:     number
+  totalMonthlyCostUsd: number
+  active:             boolean
+}
+
+export interface LicenceCostSummaryResponse {
+  totalUsers:          number
+  totalMonthlyCostUsd: number
+  totalAnnualCostUsd:  number
+  tiers:               TierCostBreakdown[]
+}
+
+export interface JaegerStorageResponse {
+  totalStorageSizeBytes:     number
+  totalStorageSizeFormatted: string
+  totalSpanCount:            number
+  totalTraceCount:           number
+  indexCount:                number
+  costPerGbUsd:              number
+  totalCostUsd:              number
+  services:                  ServiceSpanDetail[]
+}
+
+// ── Billing (US-BILL-012) — Monthly Billing Trend ───────────────────────────
+
+export interface MonthlyTrendDataPoint {
+  month:          string   // "2026-01"
+  monthLabel:     string   // "Jan 2026"
+  year:           number
+  monthNumber:    number
+  storageCostUsd: number
+  computeCostUsd: number
+  licenceCostUsd: number
+  totalCostUsd:   number
+}
+
+export interface BillingTrendResponse {
+  startDate:            string | null
+  endDate:              string | null
+  monthCount:           number
+  grandTotalCostUsd:    number
+  totalStorageCostUsd:  number
+  totalComputeCostUsd:  number
+  totalLicenceCostUsd:  number
+  months:               MonthlyTrendDataPoint[]
 }

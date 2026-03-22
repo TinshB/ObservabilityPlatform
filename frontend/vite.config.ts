@@ -65,6 +65,11 @@ export default defineConfig({
         target: 'http://localhost:8082',
         changeOrigin: true,
       },
+      // Billing service routes → apm-billing-service (US-BILL-001)
+      '/api/v1/billing': {
+        target: 'http://localhost:8086',
+        changeOrigin: true,
+      },
       // AI service routes → apm-ai-service (Sprint 15)
       '/api/v1/ai': {
         target: 'http://localhost:8085',

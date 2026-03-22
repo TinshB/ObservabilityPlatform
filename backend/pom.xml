@@ -24,6 +24,7 @@
         <module>apm-service</module>
         <module>apm-report-service</module>
         <module>apm-ai-service</module>
+        <module>apm-billing-service</module>
         <!-- Future sprint modules:
         <module>alert-engine</module>                Sprint 10
         <module>workflow-service</module>            Sprint 12

@@ -57,6 +57,9 @@ const DashboardCanvasPage = lazy(() => import('@/pages/dashboards/DashboardCanva
 const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage'))
 const SyntheticMonitoringPage = lazy(() => import('@/pages/synthetic/SyntheticMonitoringPage'))
 
+// Billing (US-BILL-001)
+const BillingPage = lazy(() => import('@/pages/billing/BillingPage'))
+
 // Future routes (added as sprints deliver them):
 //  Sprint 15-16: /ai
 
@@ -103,6 +106,7 @@ export default function AppRoutes() {
             <Route path="/dashboards/:dashboardId" element={<ErrorBoundary><DashboardCanvasPage /></ErrorBoundary>} />
             <Route path="/reports" element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />
             <Route path="/synthetic" element={<ErrorBoundary><SyntheticMonitoringPage /></ErrorBoundary>} />
+            <Route path="/admin/billings" element={<ErrorBoundary><BillingPage /></ErrorBoundary>} />
             <Route path="/profile" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
           </Route>
         </Route>

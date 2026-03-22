@@ -1,18 +1,25 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════
-# build.sh — Build Docker images for all services
+# build.sh — Unified build script (delegates to build-backend.sh / build-frontend.sh)
+#
 # Usage:
-#   ./deploy/build.sh              # Build all
-#   ./deploy/build.sh backend      # Build backend only
-#   ./deploy/build.sh frontend     # Build frontend only
-#   ./deploy/build.sh <service>    # Build specific service
+#   ./deploy/build.sh                        # Build all (backend + frontend)
+#   ./deploy/build.sh backend                # Build backend only
+#   ./deploy/build.sh frontend               # Build frontend only
+#   ./deploy/build.sh <service>              # Build specific backend service
+#
+# For more control, use the dedicated scripts directly:
+#   ./deploy/build-backend.sh [target]       # Backend build with Maven + Docker
+#   ./deploy/build-frontend.sh               # Frontend build with Docker
+#
+# Environment:
+#   IMAGE_TAG   Docker image tag (default: latest)
 # ═══════════════════════════════════════════════════════════════════
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-IMAGE_TAG="${IMAGE_TAG:-latest}"
+export IMAGE_TAG="${IMAGE_TAG:-latest}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -20,49 +27,10 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 log()   { echo -e "${GREEN}[BUILD]${NC} $1"; }
-warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
-BACKEND_SERVICES=(
-    "user-management-service"
-    "apm-service"
-    "apm-report-service"
-    "apm-ai-service"
-)
-
-build_backend_service() {
-    local svc=$1
-    log "Building obs/${svc}:${IMAGE_TAG} ..."
-    docker build \
-        --build-arg SERVICE_NAME="${svc}" \
-        -t "obs/${svc}:${IMAGE_TAG}" \
-        -f "${PROJECT_ROOT}/backend/Dockerfile" \
-        "${PROJECT_ROOT}/backend"
-    log "Built obs/${svc}:${IMAGE_TAG}"
-}
-
-build_python_sidecar() {
-    log "Building obs/python-sidecar:${IMAGE_TAG} ..."
-    docker build \
-        -t "obs/python-sidecar:${IMAGE_TAG}" \
-        "${PROJECT_ROOT}/backend/apm-ai-service/python-sidecar"
-    log "Built obs/python-sidecar:${IMAGE_TAG}"
-}
-
-build_frontend() {
-    log "Building obs/frontend:${IMAGE_TAG} ..."
-    docker build \
-        -t "obs/frontend:${IMAGE_TAG}" \
-        "${PROJECT_ROOT}/frontend"
-    log "Built obs/frontend:${IMAGE_TAG}"
-}
-
-build_all_backend() {
-    for svc in "${BACKEND_SERVICES[@]}"; do
-        build_backend_service "$svc"
-    done
-    build_python_sidecar
-}
+# Ensure sub-scripts are executable
+chmod +x "${SCRIPT_DIR}/build-backend.sh" "${SCRIPT_DIR}/build-frontend.sh"
 
 # ── Main ───────────────────────────────────────────────────────────
 TARGET="${1:-all}"
@@ -70,27 +38,34 @@ TARGET="${1:-all}"
 case "$TARGET" in
     all)
         log "Building ALL images (tag: ${IMAGE_TAG})"
-        build_all_backend
-        build_frontend
+        echo ""
+        "${SCRIPT_DIR}/build-backend.sh" all
+        echo ""
+        "${SCRIPT_DIR}/build-frontend.sh"
         ;;
     backend)
-        log "Building all backend images (tag: ${IMAGE_TAG})"
-        build_all_backend
+        "${SCRIPT_DIR}/build-backend.sh" all
         ;;
     frontend)
-        build_frontend
+        "${SCRIPT_DIR}/build-frontend.sh"
         ;;
-    python-sidecar)
-        build_python_sidecar
-        ;;
-    user-management-service|apm-service|apm-report-service|apm-ai-service)
-        build_backend_service "$TARGET"
+    python-sidecar|user-management-service|apm-service|apm-report-service|apm-ai-service)
+        "${SCRIPT_DIR}/build-backend.sh" "$TARGET"
         ;;
     *)
-        error "Unknown target: $TARGET. Valid: all, backend, frontend, python-sidecar, ${BACKEND_SERVICES[*]}"
+        error "Unknown target: $TARGET
+Valid targets:
+  all                       Build everything (backend + frontend)
+  backend                   Build all backend services
+  frontend                  Build frontend only
+  user-management-service   Build user-management service
+  apm-service               Build APM service
+  apm-report-service        Build report service
+  apm-ai-service            Build AI service
+  python-sidecar            Build Python ML sidecar"
         ;;
 esac
 
 echo ""
-log "Build complete. Images:"
+log "Build complete. All images:"
 docker images --filter "reference=obs/*" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}"

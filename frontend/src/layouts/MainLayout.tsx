@@ -39,6 +39,7 @@ import RuleIcon            from '@mui/icons-material/Rule'
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined'
 import AssessmentIcon     from '@mui/icons-material/Assessment'
 import NetworkCheckIcon   from '@mui/icons-material/NetworkCheck'
+import PaymentIcon        from '@mui/icons-material/Payment'
 import PeopleIcon          from '@mui/icons-material/People'
 import SecurityIcon        from '@mui/icons-material/Security'
 import PersonIcon          from '@mui/icons-material/Person'
@@ -82,8 +83,9 @@ const NAV_ITEMS = [
 ] as const
 
 const ADMIN_ITEMS = [
-  { label: 'Users',  icon: <PeopleIcon />,   path: '/admin/users' },
-  { label: 'Roles',  icon: <SecurityIcon />,  path: '/admin/roles' },
+  { label: 'Users',    icon: <PeopleIcon />,   path: '/admin/users' },
+  { label: 'Roles',    icon: <SecurityIcon />,  path: '/admin/roles' },
+  { label: 'Billings', icon: <PaymentIcon />,   path: '/admin/billings' },
 ] as const
 
 // Build a path → label lookup from all nav items for the Recent section
@@ -122,7 +124,7 @@ export default function MainLayout() {
   const isMobile  = useMediaQuery(theme.breakpoints.down('md'))
   const navigate  = useNavigate()
   const location  = useLocation()
-  const { user, logout, hasRole } = useAuth()
+  const { user, logout, hasAnyRole } = useAuth()
   const [mobileOpen, setMobileOpen]   = useState(false)
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null)
 
@@ -149,7 +151,7 @@ export default function MainLayout() {
 
   const handleDrawerToggle = () => setMobileOpen((prev) => !prev)
 
-  const isAdmin = hasRole('ADMIN')
+  const isAdmin = hasAnyRole(['ADMIN', 'SUPER_ADMIN'])
 
   const modeIcon = effectiveMode === 'dark' ? <DarkModeIcon /> : <LightModeIcon />
 

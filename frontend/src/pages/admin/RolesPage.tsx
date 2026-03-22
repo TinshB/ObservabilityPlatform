@@ -11,8 +11,21 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import type { Role, Permission } from '@/types'
 import * as roleService from '@/services/roleService'
+import { useAuth } from '@/hooks/useAuth'
+
+/** Permissions that only SUPER_ADMIN can assign — ADMIN cannot select these. */
+const RESTRICTED_PERMISSIONS = new Set([
+  'ROLES:CREATE',
+  'ROLES:UPDATE',
+  'BILLING:MANAGE_TIERS',
+  'USERS:DELETE',
+])
 
 export default function RolesPage() {
+  const { hasRole } = useAuth()
+  const isSuperAdmin = hasRole('SUPER_ADMIN')
+  const canCreateRoles = isSuperAdmin
+
   const [roles, setRoles]             = useState<Role[]>([])
   const [permissions, setPermissions] = useState<Permission[]>([])
   const [loading, setLoading]         = useState(true)
@@ -92,36 +105,63 @@ export default function RolesPage() {
   }
 
   const toggleResourceAll = (resource: string) => {
-    const resourcePermIds = permissionsByResource[resource]?.map(p => p.id) || []
-    const allSelected = resourcePermIds.every(id => selectedPerms.includes(id))
+    const selectableIds = (permissionsByResource[resource] ?? [])
+      .filter(p => !isRestricted(p))
+      .map(p => p.id)
+    const allSelected = selectableIds.every(id => selectedPerms.includes(id))
     if (allSelected) {
-      setSelectedPerms(prev => prev.filter(id => !resourcePermIds.includes(id)))
+      setSelectedPerms(prev => prev.filter(id => !selectableIds.includes(id)))
     } else {
-      setSelectedPerms(prev => [...new Set([...prev, ...resourcePermIds])])
+      setSelectedPerms(prev => [...new Set([...prev, ...selectableIds])])
     }
   }
+
+  /** Check if a permission is restricted for the current user. */
+  const isRestricted = (p: Permission) =>
+    !isSuperAdmin && RESTRICTED_PERMISSIONS.has(`${p.resource}:${p.action}`)
 
   // ── Permission checkbox matrix (shared between create and edit) ──
   const renderPermissionMatrix = (selected: string[], toggle: (id: string) => void, toggleResource: (r: string) => void) => (
     <Box sx={{ mt: 1 }}>
       {Object.entries(permissionsByResource).map(([resource, perms]) => {
-        const allSelected = perms.every(p => selected.includes(p.id))
-        const someSelected = perms.some(p => selected.includes(p.id))
+        const selectablePerms = perms.filter(p => !isRestricted(p))
+        const allSelected = selectablePerms.length > 0 && selectablePerms.every(p => selected.includes(p.id))
+        const someSelected = selectablePerms.some(p => selected.includes(p.id))
+        const allRestricted = perms.every(p => isRestricted(p))
         return (
           <Box key={resource} sx={{ mb: 2 }}>
             <FormControlLabel
               control={
                 <Checkbox checked={allSelected} indeterminate={someSelected && !allSelected}
+                  disabled={allRestricted}
                   onChange={() => toggleResource(resource)} />
               }
               label={<Typography fontWeight={600} fontSize="0.875rem">{resource}</Typography>}
             />
             <FormGroup row sx={{ pl: 4 }}>
-              {perms.map(p => (
-                <FormControlLabel key={p.id}
-                  control={<Checkbox size="small" checked={selected.includes(p.id)} onChange={() => toggle(p.id)} />}
-                  label={p.action} />
-              ))}
+              {perms.map(p => {
+                const restricted = isRestricted(p)
+                return (
+                  <Tooltip key={p.id} title={restricted ? 'Only Super Admin can assign this permission' : ''}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox size="small"
+                          checked={selected.includes(p.id)}
+                          disabled={restricted}
+                          onChange={() => toggle(p.id)} />
+                      }
+                      label={
+                        <Typography
+                          component="span"
+                          fontSize="0.875rem"
+                          color={restricted ? 'text.disabled' : 'text.primary'}
+                        >
+                          {p.action}
+                        </Typography>
+                      } />
+                  </Tooltip>
+                )
+              })}
             </FormGroup>
           </Box>
         )
@@ -140,13 +180,15 @@ export default function RolesPage() {
   }
 
   const toggleCreateResource = (resource: string) => {
-    const resourcePermIds = permissionsByResource[resource]?.map(p => p.id) || []
-    const allSelected = resourcePermIds.every(id => createForm.permissionIds.includes(id))
+    const selectableIds = (permissionsByResource[resource] ?? [])
+      .filter(p => !isRestricted(p))
+      .map(p => p.id)
+    const allSelected = selectableIds.every(id => createForm.permissionIds.includes(id))
     setCreateForm(f => ({
       ...f,
       permissionIds: allSelected
-        ? f.permissionIds.filter(id => !resourcePermIds.includes(id))
-        : [...new Set([...f.permissionIds, ...resourcePermIds])],
+        ? f.permissionIds.filter(id => !selectableIds.includes(id))
+        : [...new Set([...f.permissionIds, ...selectableIds])],
     }))
   }
 
@@ -154,9 +196,11 @@ export default function RolesPage() {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h5" fontWeight={700}>Role Management</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
-          Create Role
-        </Button>
+        {canCreateRoles && (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
+            Create Role
+          </Button>
+        )}
       </Box>
 
       <TableContainer component={Paper} variant="outlined">
@@ -173,7 +217,7 @@ export default function RolesPage() {
           <TableBody>
             {loading ? (
               <TableRow><TableCell colSpan={5} align="center">Loading...</TableCell></TableRow>
-            ) : roles.map((role) => (
+            ) : roles.filter(r => isSuperAdmin || r.name !== 'SUPER_ADMIN').map((role) => (
               <React.Fragment key={role.id}>
                 <TableRow>
                   <TableCell>

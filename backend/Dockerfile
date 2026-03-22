@@ -1,5 +1,5 @@
 # ─── Multi-stage Dockerfile for all Spring Boot backend services ───
-# Usage: docker build --build-arg SERVICE_NAME=user-management-service -t obs-user-mgmt .
+# Usage: docker build --build-arg SERVICE_NAME=user-management-service -t obs/user-management-service .
 
 # ── Stage 1: Build ─────────────────────────────────────────────────
 FROM eclipse-temurin:25-jdk-alpine AS builder
@@ -8,7 +8,7 @@ WORKDIR /build
 
 # Copy Maven wrapper and parent pom first (cache dependencies)
 COPY .mvn/ .mvn/
-COPY mvnw.cmd mvnw pom.xml ./
+COPY mvnw mvnw.cmd pom.xml ./
 
 # Copy all module pom.xml files for dependency resolution
 COPY observability-shared/pom.xml observability-shared/pom.xml
@@ -27,10 +27,11 @@ COPY apm-service/ apm-service/
 COPY apm-report-service/ apm-report-service/
 COPY apm-ai-service/ apm-ai-service/
 
-# Build shared library first, then all services
-RUN ./mvnw clean install -pl observability-shared -DskipTests -B -q
+# Build: install parent POM + shared library, then package the target service
 ARG SERVICE_NAME
-RUN ./mvnw clean package -pl ${SERVICE_NAME} -DskipTests -B -q
+RUN ./mvnw install -N -DskipTests -B -q && \
+    ./mvnw install -pl observability-shared -DskipTests -B -q && \
+    ./mvnw package -pl ${SERVICE_NAME} -DskipTests -B -q
 
 # ── Stage 2: Runtime ───────────────────────────────────────────────
 FROM eclipse-temurin:25-jre-alpine
