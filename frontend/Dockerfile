@@ -1,14 +1,14 @@
 # ─── Multi-stage Dockerfile for React frontend ────────────────────
 
 # ── Stage 1: Build ─────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /build
 
 # Copy dependency files first (cache layer)
 COPY package.json package-lock.json ./
 
-RUN npm ci --silent
+RUN npm ci
 
 # Copy source and build
 COPY . .

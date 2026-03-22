@@ -16,6 +16,7 @@ COPY user-management-service/pom.xml user-management-service/pom.xml
 COPY apm-service/pom.xml apm-service/pom.xml
 COPY apm-report-service/pom.xml apm-report-service/pom.xml
 COPY apm-ai-service/pom.xml apm-ai-service/pom.xml
+COPY apm-billing-service/pom.xml apm-billing-service/pom.xml
 
 # Download dependencies (cached unless pom.xml changes)
 RUN chmod +x mvnw && ./mvnw dependency:go-offline -B -q 2>/dev/null || true
@@ -26,6 +27,7 @@ COPY user-management-service/ user-management-service/
 COPY apm-service/ apm-service/
 COPY apm-report-service/ apm-report-service/
 COPY apm-ai-service/ apm-ai-service/
+COPY apm-billing-service/ apm-billing-service/
 
 # Build: install parent POM + shared library, then package the target service
 ARG SERVICE_NAME
