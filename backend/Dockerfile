@@ -37,7 +37,12 @@ RUN ./mvnw install -N -DskipTests -B -q && \
     ./mvnw install -pl observability-shared -DskipTests -B -q && \
     ./mvnw package -pl ${SERVICE_NAME} -DskipTests -B -q
 
-# ── Stage 2: Runtime ───────────────────────────────────────────────
+# ── Stage 2: Download OTel Java agent ────────────────────────────
+FROM eclipse-temurin:25-jre-alpine AS otel
+RUN wget -q https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.12.0/opentelemetry-javaagent.jar \
+    -O /opentelemetry-javaagent.jar
+
+# ── Stage 3: Runtime ───────────────────────────────────────────────
 FROM eclipse-temurin:25-jre-alpine
 
 RUN apk add --no-cache curl && \
@@ -47,6 +52,7 @@ WORKDIR /app
 
 ARG SERVICE_NAME
 COPY --from=builder /build/${SERVICE_NAME}/target/${SERVICE_NAME}-1.0.0-SNAPSHOT.jar app.jar
+COPY --from=otel /opentelemetry-javaagent.jar otel-agent.jar
 
 RUN chown -R appuser:appgroup /app
 USER appuser

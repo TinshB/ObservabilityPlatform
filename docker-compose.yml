@@ -191,7 +191,13 @@ services:
     environment:
       - SERVER_PORT=8082
       - SPRING_PROFILES_ACTIVE=prod
-      - JAVA_OPTS=-Xms1g -Xmx2g
+      - JAVA_OPTS=-Xms1g -Xmx2g -javaagent:/app/otel-agent.jar
+      - OTEL_SERVICE_NAME=apm-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_TRACES_EXPORTER=otlp
       - DB_HOST=postgres
       - DB_PORT=5432
       - APM_DB_NAME=${DB_NAME:-mydatabase}
