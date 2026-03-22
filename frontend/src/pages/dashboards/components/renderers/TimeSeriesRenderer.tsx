@@ -37,7 +37,7 @@ export default function TimeSeriesRenderer({ data, options }: Props) {
       />
       <YAxis fontSize={11} tickLine={false} />
       <Tooltip
-        labelFormatter={formatTime}
+        labelFormatter={(label) => formatTime(Number(label))}
         contentStyle={{ fontSize: 12 }}
       />
       {options.legend !== false && <Legend wrapperStyle={{ fontSize: 12 }} />}

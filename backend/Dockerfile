@@ -2,7 +2,9 @@
 # Usage: docker build --build-arg SERVICE_NAME=user-management-service -t obs/user-management-service .
 
 # ── Stage 1: Build ─────────────────────────────────────────────────
-FROM eclipse-temurin:25-jdk-alpine AS builder
+# Using glibc-based image (not Alpine) because protoc-gen-grpc-java
+# requires glibc and will not run on Alpine's musl libc.
+FROM eclipse-temurin:25-jdk AS builder
 
 WORKDIR /build
 

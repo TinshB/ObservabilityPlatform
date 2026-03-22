@@ -16,7 +16,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
-import type { SpanDetail, LogEntry } from '@/types'
+import type { LogEntry } from '@/types'
 import {
   diagnoseErrors,
   type ErrorDiagnosisResponse,
@@ -25,9 +25,7 @@ import {
 } from '@/services/aiService'
 
 interface Props {
-  traceId: string
-  spans: SpanDetail[]
-  traceLogs: LogEntry[]
+  entries: LogEntry[]
 }
 
 function severityColor(s: string): 'error' | 'warning' | 'info' | 'default' {
@@ -53,7 +51,6 @@ function SuggestionCard({ suggestion }: { suggestion: ErrorFixSuggestion }) {
           : suggestion.severity === 'WARNING' ? 'warning.main' : 'info.main',
       }}
     >
-      {/* Header */}
       <Box
         onClick={() => setExpanded((p) => !p)}
         sx={{
@@ -84,19 +81,10 @@ function SuggestionCard({ suggestion }: { suggestion: ErrorFixSuggestion }) {
         <Typography variant="body2" fontWeight={600} noWrap sx={{ flexGrow: 1 }}>
           {suggestion.serviceName}
         </Typography>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ fontFamily: '"JetBrains Mono", monospace', flexShrink: 0 }}
-        >
-          {suggestion.spanId ? `${suggestion.spanId.substring(0, 12)}...` : ''}
-        </Typography>
       </Box>
 
-      {/* Body */}
       <Collapse in={expanded}>
         <Box sx={{ px: 2, pb: 2 }}>
-          {/* Diagnosis */}
           <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
             Diagnosis
           </Typography>
@@ -104,7 +92,6 @@ function SuggestionCard({ suggestion }: { suggestion: ErrorFixSuggestion }) {
             {suggestion.diagnosis}
           </Typography>
 
-          {/* Suggested Fix */}
           <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
             Suggested Fix
           </Typography>
@@ -112,7 +99,6 @@ function SuggestionCard({ suggestion }: { suggestion: ErrorFixSuggestion }) {
             {suggestion.suggestedFix}
           </Typography>
 
-          {/* Code Snippet */}
           {suggestion.codeSnippet && (
             <>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
@@ -145,7 +131,6 @@ function SuggestionCard({ suggestion }: { suggestion: ErrorFixSuggestion }) {
             </>
           )}
 
-          {/* References */}
           {suggestion.references.length > 0 && (
             <>
               <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
@@ -181,52 +166,47 @@ function SuggestionCard({ suggestion }: { suggestion: ErrorFixSuggestion }) {
   )
 }
 
-export default function AiSuggestionsPanel({ traceId, spans, traceLogs }: Props) {
+export default function LogDiagnosisPanel({ entries }: Props) {
   const [result, setResult] = useState<ErrorDiagnosisResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const errorSpans = spans.filter((s) => s.hasError)
+  const errorLogs = entries.filter((e) => e.severity === 'ERROR' || e.severity === 'FATAL')
 
   const handleDiagnose = useCallback(async () => {
-    if (errorSpans.length === 0) return
+    if (errorLogs.length === 0) return
 
     setLoading(true)
     setError(null)
     setResult(null)
 
     try {
-      const errorSpanInputs: ErrorSpanInput[] = errorSpans.map((s) => {
-        // Collect error log messages from span logs
-        const errorLogs: string[] = s.logs
-          .map((log) => {
-            const entries = Object.entries(log.fields)
-            return entries.map(([k, v]) => `${k}: ${v}`).join(', ')
-          })
-          .filter(Boolean)
+      // Group error logs by service and build pseudo error spans
+      const byService = new Map<string, LogEntry[]>()
+      for (const log of errorLogs) {
+        const svc = log.serviceName || 'unknown'
+        if (!byService.has(svc)) byService.set(svc, [])
+        byService.get(svc)!.push(log)
+      }
 
-        return {
-          spanId: s.spanId,
-          serviceName: s.serviceName,
-          operation: s.operationName,
-          durationMicros: s.durationMicros,
-          httpMethod: s.httpMethod || undefined,
-          httpUrl: s.httpUrl || undefined,
-          httpStatusCode: s.httpStatusCode || undefined,
-          tags: s.tags,
-          errorLogs,
-        }
-      })
+      const errorSpans: ErrorSpanInput[] = Array.from(byService.entries()).map(([svc, logs]) => ({
+        spanId: logs[0]?.spanId || '',
+        serviceName: svc,
+        operation: `${logs.length} error log(s)`,
+        durationMicros: 0,
+        errorLogs: logs.slice(0, 20).map((l) => `[${l.severity}] ${l.body || ''}`),
+      }))
 
-      // Gather associated log messages from ES
-      const associatedLogs = traceLogs
-        .filter((l) => l.severity === 'ERROR' || l.severity === 'FATAL' || l.severity === 'WARN')
-        .slice(0, 30)
-        .map((l) => `[${l.severity}] ${l.serviceName || ''}: ${l.body || ''}`)
+      const associatedLogs = entries
+        .filter((l) => l.severity === 'WARN')
+        .slice(0, 20)
+        .map((l) => `[WARN] ${l.serviceName || ''}: ${l.body || ''}`)
+
+      const traceId = errorLogs.find((l) => l.traceId)?.traceId || 'log-diagnosis'
 
       const response = await diagnoseErrors({
         traceId,
-        errorSpans: errorSpanInputs,
+        errorSpans,
         associatedLogs,
         languageHint: 'java',
       })
@@ -238,13 +218,12 @@ export default function AiSuggestionsPanel({ traceId, spans, traceLogs }: Props)
     } finally {
       setLoading(false)
     }
-  }, [traceId, errorSpans, traceLogs])
+  }, [entries, errorLogs])
 
-  if (errorSpans.length === 0) return null
+  if (errorLogs.length === 0) return null
 
   return (
-    <Paper variant="outlined" sx={{ mt: 3 }}>
-      {/* Header */}
+    <Paper variant="outlined" sx={{ mt: 2 }}>
       <Box
         sx={{
           display: 'flex',
@@ -259,10 +238,10 @@ export default function AiSuggestionsPanel({ traceId, spans, traceLogs }: Props)
         <AutoFixHighIcon color="primary" />
         <Box sx={{ flexGrow: 1 }}>
           <Typography variant="subtitle2" fontWeight={700}>
-            AI Error Diagnosis
+            AI Log Diagnosis
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {errorSpans.length} error span{errorSpans.length !== 1 ? 's' : ''} detected
+            {errorLogs.length} error log{errorLogs.length !== 1 ? 's' : ''} in current results
           </Typography>
         </Box>
 
@@ -292,25 +271,17 @@ export default function AiSuggestionsPanel({ traceId, spans, traceLogs }: Props)
         </Button>
       </Box>
 
-      {/* Error state */}
       {error && (
         <Alert severity="error" sx={{ mx: 2, my: 1.5 }}>
           {error}
         </Alert>
       )}
 
-      {/* Results */}
       {result && (
         <Box sx={{ p: 2 }}>
-          {/* Summary */}
           <Paper
             variant="outlined"
-            sx={{
-              p: 1.5,
-              mb: 2,
-              bgcolor: 'primary.50',
-              borderColor: 'primary.200',
-            }}
+            sx={{ p: 1.5, mb: 2, bgcolor: 'primary.50', borderColor: 'primary.200' }}
           >
             <Typography variant="body2" fontWeight={600}>
               {result.summary}
@@ -322,7 +293,6 @@ export default function AiSuggestionsPanel({ traceId, spans, traceLogs }: Props)
             )}
           </Paper>
 
-          {/* Suggestion cards */}
           {result.suggestions.length > 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {result.suggestions.map((s, i) => (

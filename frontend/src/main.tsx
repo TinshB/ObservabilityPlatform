@@ -9,7 +9,7 @@ import { initTelemetry, ErrorBoundaryTracer } from './telemetry'
 import './index.css'
 
 // ── Initialise OpenTelemetry before React renders ──────────────────────────
-const shutdownTelemetry = initTelemetry()
+initTelemetry()
 
 /**
  * Subscribe to OS-level color scheme changes so that "system" mode

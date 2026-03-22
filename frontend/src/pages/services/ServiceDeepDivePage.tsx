@@ -38,7 +38,6 @@ import type {
   ServiceDeepDiveResponse,
   DeepDiveErrorTrace,
   DependencyGraph,
-  DependencyEdge,
   TimeRangePreset,
 } from '@/types'
 import * as serviceDeepDiveService from '@/services/serviceDeepDiveService'
