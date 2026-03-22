@@ -77,7 +77,7 @@ function DurationBar({ durationMicros, maxDuration, hasError }: {
             sx={{
               height: 8,
               borderRadius: 4,
-              backgroundColor: 'grey.200',
+              backgroundColor: 'action.disabledBackground',
               '& .MuiLinearProgress-bar': {
                 borderRadius: 4,
                 backgroundColor: hasError ? 'error.main' : 'primary.main',

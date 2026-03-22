@@ -181,7 +181,7 @@ export default function SpanBreakupPanel({ traceId }: { traceId: string }) {
                       size="small"
                       sx={{
                         backgroundColor: color,
-                        color: '#fff',
+                        color: 'common.white',
                         fontWeight: 600,
                         fontSize: '0.7rem',
                         height: 22,

@@ -136,7 +136,7 @@ export default function DependencyDetailPanel({ edge, onClose }: DependencyDetai
         <DetailRow label="Target" value={edge.target} />
         <DetailRow label="Type">
           <Chip size="small" label={edge.dependencyType}
-            sx={{ backgroundColor: EDGE_COLORS[edge.dependencyType], color: '#fff' }} />
+            sx={{ backgroundColor: EDGE_COLORS[edge.dependencyType], color: 'common.white' }} />
         </DetailRow>
       </Box>
 

@@ -104,7 +104,7 @@ export default function WorkflowStepMetricsPanel({ workflowId, refreshKey }: Pro
                 <TableCell>
                   <Box sx={{
                     width: 22, height: 22, borderRadius: '50%',
-                    backgroundColor: 'primary.main', color: 'white',
+                    backgroundColor: 'primary.main', color: 'primary.contrastText',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '0.7rem', fontWeight: 700,
                   }}>

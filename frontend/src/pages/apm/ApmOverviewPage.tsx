@@ -204,7 +204,7 @@ function ServiceHealthCard({ svc, onClick }: { svc: ApmServiceHealthSummary; onC
           height: 4,
           borderRadius: 2,
           mb: 1,
-          backgroundColor: 'grey.200',
+          backgroundColor: 'action.disabledBackground',
           '& .MuiLinearProgress-bar': {
             borderRadius: 2,
             backgroundColor: HEALTH_COLORS[svc.healthStatus] || HEALTH_COLORS.unknown,
@@ -359,7 +359,7 @@ function ServiceListTable({ services, onServiceClick }: {
                         width: 50,
                         height: 6,
                         borderRadius: 3,
-                        backgroundColor: 'grey.200',
+                        backgroundColor: 'action.disabledBackground',
                         '& .MuiLinearProgress-bar': {
                           borderRadius: 3,
                           backgroundColor: HEALTH_COLORS[svc.healthStatus] || HEALTH_COLORS.unknown,

@@ -168,7 +168,7 @@ export default function InlineLogDiagnosis({ entry }: Props) {
                       p: 1,
                       mb: 0.5,
                       borderRadius: 1,
-                      bgcolor: 'grey.900',
+                      bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.900',
                       color: 'grey.100',
                       fontFamily: '"JetBrains Mono", monospace',
                       fontSize: '0.75rem',

@@ -404,7 +404,7 @@ export default function WorkflowBuilderPage() {
                   {/* Step order badge */}
                   <Box sx={{
                     width: 28, height: 28, borderRadius: '50%', backgroundColor: 'primary.main',
-                    color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'primary.contrastText', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontWeight: 700, fontSize: '0.8rem', flexShrink: 0, mt: 0.5,
                   }}>
                     {order}

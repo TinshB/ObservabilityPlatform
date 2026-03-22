@@ -6,6 +6,7 @@ import {
   Grid,
   Skeleton,
   Alert,
+  useTheme,
 } from '@mui/material'
 import {
   ResponsiveContainer,
@@ -42,11 +43,18 @@ const STATUS_COLORS: Record<CwvStatus, string> = {
   unknown: '#9e9e9e',
 }
 
-const STATUS_BG: Record<CwvStatus, string> = {
+const STATUS_BG_LIGHT: Record<CwvStatus, string> = {
   good: '#e8f5e9',
   'needs-improvement': '#fff3e0',
   poor: '#ffebee',
   unknown: '#f5f5f5',
+}
+
+const STATUS_BG_DARK: Record<CwvStatus, string> = {
+  good: '#1b3a2a',
+  'needs-improvement': '#3a2e1b',
+  poor: '#3a1b1b',
+  unknown: '#2a2a2a',
 }
 
 function VitalCard({
@@ -60,6 +68,8 @@ function VitalCard({
   status: CwvStatus
   unit: string
 }) {
+  const theme = useTheme()
+  const STATUS_BG = theme.palette.mode === 'dark' ? STATUS_BG_DARK : STATUS_BG_LIGHT
   const formatted = value != null
     ? unit === 'score' ? value.toFixed(3) : formatLatency(value)
     : 'N/A'

@@ -154,7 +154,7 @@ function HealthGauge({ score, status }: { score: number; status: string }) {
           mt: 1.5,
           height: 6,
           borderRadius: 3,
-          backgroundColor: 'grey.200',
+          backgroundColor: 'action.disabledBackground',
           '& .MuiLinearProgress-bar': {
             borderRadius: 3,
             backgroundColor: `${healthColor(status)}.main`,
@@ -643,7 +643,7 @@ function DependenciesTab({ serviceId }: { serviceId: string }) {
           <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
             {Object.entries(DEP_NODE_COLORS).map(([type, color]) => (
               <Chip key={type} size="small" label={type.replace('_', ' ')}
-                sx={{ backgroundColor: color, color: '#fff', fontSize: '0.7rem', height: 22 }} />
+                sx={{ backgroundColor: color, color: 'common.white', fontSize: '0.7rem', height: 22 }} />
             ))}
           </Box>
         </Box>
@@ -658,7 +658,7 @@ function DependenciesTab({ serviceId }: { serviceId: string }) {
       </Box>
 
       {/* Graph */}
-      <Paper variant="outlined" sx={{ position: 'relative', height: 420, minHeight: 300, overflow: 'hidden', backgroundColor: '#fafafa' }}>
+      <Paper variant="outlined" sx={{ position: 'relative', height: 420, minHeight: 300, overflow: 'hidden', backgroundColor: 'background.default' }}>
         {depLoading ? (
           <Box sx={{ p: 4 }}><Skeleton variant="rectangular" height={360} /></Box>
         ) : depError ? (

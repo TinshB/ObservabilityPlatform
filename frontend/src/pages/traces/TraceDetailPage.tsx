@@ -279,7 +279,7 @@ function SpanRow({
             size="small"
             sx={{
               backgroundColor: svcColor,
-              color: '#fff',
+              color: 'common.white',
               fontWeight: 600,
               fontSize: '0.7rem',
               height: 20,
@@ -323,7 +323,7 @@ function SpanRow({
               left: 0,
               right: 0,
               height: 2,
-              backgroundColor: 'grey.200',
+              backgroundColor: 'action.disabledBackground',
             }}
           />
           {/* Timing bar */}
@@ -423,7 +423,7 @@ function SpanRow({
               <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
                 Span Logs ({span.logs.length})
               </Typography>
-              <Table size="small" sx={{ '& td': { borderBottom: '1px solid', borderColor: 'grey.200' } }}>
+              <Table size="small" sx={{ '& td': { borderBottom: '1px solid', borderColor: 'divider' } }}>
                 <TableBody>
                   {span.logs.map((log, idx) => (
                     <SpanLogRow key={idx} log={log} traceStartMicros={traceStartMicros} />
@@ -453,7 +453,7 @@ function ServiceLegend({ services, serviceColorMap }: { services: string[]; serv
           size="small"
           sx={{
             backgroundColor: getServiceColor(svc, serviceColorMap),
-            color: '#fff',
+            color: 'common.white',
             fontWeight: 600,
             fontSize: '0.75rem',
           }}

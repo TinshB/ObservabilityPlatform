@@ -335,7 +335,7 @@ export default function LogMetricsTab({ serviceId, serviceName, params }: Props)
                             size="small"
                             sx={{
                               bgcolor: SEVERITY_COLORS[p.level] ?? '#9e9e9e',
-                              color: 'white',
+                              color: 'common.white',
                               fontWeight: 600,
                               fontSize: '0.7rem',
                             }}

@@ -573,7 +573,7 @@ export default function WorkflowDashboardPage() {
                       <Box sx={{
                         width: 22, height: 22, borderRadius: '50%',
                         backgroundColor: step.error ? STATUS_COLORS.FAILED : STATUS_COLORS.COMPLETE,
-                        color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'common.white', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '0.7rem', fontWeight: 700, flexShrink: 0,
                       }}>
                         {step.stepOrder}

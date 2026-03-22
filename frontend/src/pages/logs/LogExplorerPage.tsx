@@ -71,7 +71,7 @@ function SeverityChip({ severity }: { severity: LogSeverity }) {
       sx={{
         fontWeight: 600,
         fontSize: '0.7rem',
-        color: '#fff',
+        color: 'common.white',
         backgroundColor: SEVERITY_COLORS[severity] ?? '#757575',
         minWidth: 56,
       }}
@@ -146,7 +146,7 @@ function LogRow({ entry }: { entry: LogEntry }) {
       <TableRow>
         <TableCell colSpan={5} sx={{ py: 0, borderBottom: 'unset' }}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1, my: 1 }}>
+            <Box sx={{ p: 2, backgroundColor: 'action.hover', borderRadius: 1, my: 1 }}>
               {/* Full log body */}
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 Message

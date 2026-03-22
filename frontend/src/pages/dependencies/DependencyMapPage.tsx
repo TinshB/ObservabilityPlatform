@@ -341,7 +341,7 @@ export default function DependencyMapPage() {
         <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
           {Object.entries(NODE_COLORS).map(([type, color]) => (
             <Chip key={type} size="small" label={type.replace('_', ' ')}
-              sx={{ backgroundColor: color, color: '#fff', fontSize: '0.75rem' }} />
+              sx={{ backgroundColor: color, color: 'common.white', fontSize: '0.75rem' }} />
           ))}
           <Divider orientation="vertical" flexItem />
           {Object.entries(EDGE_COLORS).map(([type, color]) => (
@@ -357,7 +357,7 @@ export default function DependencyMapPage() {
         height: 'calc(100vh - 280px)',
         minHeight: 400,
         overflow: 'hidden',
-        backgroundColor: '#fafafa',
+        backgroundColor: 'background.default',
       }}>
         {!selectedService ? (
           <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
