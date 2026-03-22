@@ -163,7 +163,7 @@ services:
       - DB_NAME=${DB_NAME:-mydatabase}
       - DB_USERNAME=${DB_USERNAME:-myuser}
       - DB_PASSWORD=${DB_PASSWORD:-mypassword}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:-bXktc3VwZXItc2VjcmV0LWtleS1mb3Itand0LXRva2VuLXNpZ25pbmctdGhhdC1pcy1sb25nLWVub3VnaC1mb3ItaG1hYy1zaGE1MTI=}
       - ELASTICSEARCH_URI=http://elasticsearch:9200
     networks:
       - obs-network
