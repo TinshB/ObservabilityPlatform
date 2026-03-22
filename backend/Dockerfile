@@ -40,7 +40,8 @@ RUN ./mvnw install -N -DskipTests -B -q && \
 # ── Stage 2: Runtime ───────────────────────────────────────────────
 FROM eclipse-temurin:25-jre-alpine
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN apk add --no-cache curl && \
+    addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 

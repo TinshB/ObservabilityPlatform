@@ -45,7 +45,7 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 info()  { echo -e "${CYAN}[INFO]${NC} $1"; }
 
 INFRA_SERVICES="postgres redis elasticsearch prometheus jaeger otel-collector mailhog"
-APP_SERVICES="user-management-service apm-service apm-report-service python-sidecar apm-ai-service"
+APP_SERVICES="user-management-service apm-service apm-report-service python-sidecar apm-ai-service apm-billing-service"
 ALL_BACKEND="${INFRA_SERVICES} ${APP_SERVICES}"
 
 # ── Docker Compose wrapper ────────────────────────────────────────

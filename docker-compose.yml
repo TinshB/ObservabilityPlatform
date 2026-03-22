@@ -199,7 +199,7 @@ services:
       - APM_DB_NAME=${DB_NAME:-mydatabase}
       - DB_USERNAME=${DB_USERNAME:-myuser}
       - DB_PASSWORD=${DB_PASSWORD:-mypassword}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:-bXktc3VwZXItc2VjcmV0LWtleS1mb3Itand0LXRva2VuLXNpZ25pbmctdGhhdC1pcy1sb25nLWVub3VnaC1mb3ItaG1hYy1zaGE1MTI=}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
@@ -248,7 +248,7 @@ services:
       - REPORT_DB_NAME=${DB_NAME:-mydatabase}
       - DB_USERNAME=${DB_USERNAME:-myuser}
       - DB_PASSWORD=${DB_PASSWORD:-mypassword}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:-bXktc3VwZXItc2VjcmV0LWtleS1mb3Itand0LXRva2VuLXNpZ25pbmctdGhhdC1pcy1sb25nLWVub3VnaC1mb3ItaG1hYy1zaGE1MTI=}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
@@ -323,7 +323,7 @@ services:
       - DB_NAME=${DB_NAME:-mydatabase}
       - DB_USERNAME=${DB_USERNAME:-myuser}
       - DB_PASSWORD=${DB_PASSWORD:-mypassword}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:-bXktc3VwZXItc2VjcmV0LWtleS1mb3Itand0LXRva2VuLXNpZ25pbmctdGhhdC1pcy1sb25nLWVub3VnaC1mb3ItaG1hYy1zaGE1MTI=}
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - PROMETHEUS_URL=http://prometheus:9090
       - ML_SIDECAR_HOST=python-sidecar
@@ -350,6 +350,41 @@ services:
       retries: 5
       start_period: 60s
 
+  apm-billing-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: apm-billing-service
+    image: obs/apm-billing-service:${IMAGE_TAG:-latest}
+    container_name: obs-apm-billing
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      - SERVER_PORT=8086
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xms512m -Xmx1g
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-mydatabase}
+      - DB_USERNAME=${DB_USERNAME:-myuser}
+      - DB_PASSWORD=${DB_PASSWORD:-mypassword}
+      - JWT_SECRET=${JWT_SECRET:-bXktc3VwZXItc2VjcmV0LWtleS1mb3Itand0LXRva2VuLXNpZ25pbmctdGhhdC1pcy1sb25nLWVub3VnaC1mb3ItaG1hYy1zaGE1MTI=}
+    networks:
+      - obs-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      user-management-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8086/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   # ═══════════════════════════════════════════════════════════════════
   # FRONTEND
   # ═══════════════════════════════════════════════════════════════════
@@ -369,4 +404,10 @@ services:
       user-management-service:
         condition: service_healthy
       apm-service:
+        condition: service_healthy
+      apm-report-service:
+        condition: service_healthy
+      apm-ai-service:
+        condition: service_healthy
+      apm-billing-service:
         condition: service_healthy
