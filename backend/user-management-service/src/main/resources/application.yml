@@ -80,6 +80,7 @@ springdoc:
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging:
   level:
+    root: ERROR
     com.observability: INFO
     org.springframework.security: INFO
 
