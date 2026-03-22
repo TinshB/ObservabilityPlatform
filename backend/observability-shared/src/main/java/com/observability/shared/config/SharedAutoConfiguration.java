@@ -24,7 +24,8 @@ import org.springframework.context.annotation.Import;
 @Import({
     GlobalExceptionHandler.class,
     MdcLoggingFilter.class,
-    LoggingAspect.class
+    LoggingAspect.class,
+    WebTrailingSlashConfig.class
 })
 public class SharedAutoConfiguration {
 }
