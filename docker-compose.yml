@@ -102,8 +102,6 @@ services:
     restart: unless-stopped
     ports:
       - "16686:16686"
-      - "4317:4317"
-      - "4318:4318"
     environment:
       - SPAN_STORAGE_TYPE=elasticsearch
       - ES_SERVER_URLS=http://elasticsearch:9200
@@ -118,8 +116,8 @@ services:
     container_name: obs-otel-collector
     restart: unless-stopped
     ports:
-      - "4327:4317"
-      - "4328:4318"
+      - "4317:4317"
+      - "4318:4318"
     volumes:
       - ./deploy/otel-collector-config.yml:/etc/otelcol-contrib/config.yaml
     networks:
