@@ -32,7 +32,7 @@ exporters:
        label1: prometheus
 
   elasticsearch/trace:
-    endpoint: "http://elastic-search:9200"
+    endpoint: "http://elasticsearch:9200"
     tls:
        insecure: true
     traces_index: my_trace
@@ -42,7 +42,7 @@ exporters:
        queue_size: 1000
 
   elasticsearch/log:
-    endpoint: "http://elastic-search:9200"
+    endpoint: "http://elasticsearch:9200"
     logs_dynamic_index:
        enabled: true
     tls:
