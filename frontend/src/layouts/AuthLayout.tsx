@@ -267,6 +267,15 @@ export default function AuthLayout() {
         }}
       >
         <Box sx={{ width: '100%', maxWidth: 380 }}>
+          {/* Logo + branding */}
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <img
+              src="/system_insights_logo.png"
+              alt="System Insights"
+              style={{ height: 64, width: 'auto', marginBottom: 8 }}
+            />
+          </Box>
+
           {/* Branding (shown on mobile only since left panel is hidden) */}
           {isMobile && (
             <Box sx={{ textAlign: 'center', mb: 3 }}>

@@ -158,6 +158,7 @@ function SpanLogsSection({ logs, serviceName }: { logs: LogEntry[]; serviceName:
           <TableRow>
             <TableCell sx={{ fontWeight: 600, fontSize: '0.7rem', width: 160 }}>Timestamp</TableCell>
             <TableCell sx={{ fontWeight: 600, fontSize: '0.7rem', width: 70 }}>Severity</TableCell>
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.7rem', width: 200 }}>Location</TableCell>
             <TableCell sx={{ fontWeight: 600, fontSize: '0.7rem' }}>Message</TableCell>
           </TableRow>
         </TableHead>
@@ -174,6 +175,13 @@ function SpanLogsSection({ logs, serviceName }: { logs: LogEntry[]; serviceName:
                   color={log.severity === 'ERROR' || log.severity === 'FATAL' ? 'error' : log.severity === 'WARN' ? 'warning' : 'default'}
                   sx={{ fontSize: '0.65rem', height: 18, fontWeight: 600 }}
                 />
+              </TableCell>
+              <TableCell sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.7rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200, color: 'text.secondary' }}>
+                {log.loggerName
+                  ? log.lineNumber
+                    ? `${log.loggerName}:${log.lineNumber}`
+                    : log.loggerName
+                  : '—'}
               </TableCell>
               <TableCell sx={{ fontSize: '0.75rem', maxWidth: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {log.body || '-'}

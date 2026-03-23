@@ -313,15 +313,30 @@ public class ElasticsearchLogClient {
                     attributes.put(field.getKey(), field.getValue().asText()));
         }
 
-        // Extract logger name: attributes.logger_name > attributes.code.namespace > logger_name (top-level)
+        // Extract logger name — try every common location:
+        //   1. attributes.logger_name          (OTel Logback appender)
+        //   2. attributes.code.namespace        (OTel semantic convention)
+        //   3. attributes.logger.name           (alternate convention)
+        //   4. top-level logger_name            (Logback JSON encoder / ECS)
+        //   5. scope.name / instrumentation_scope.name (OTel scope)
         String loggerName = attributes.get("logger_name");
         if (loggerName == null) loggerName = attributes.get("code.namespace");
+        if (loggerName == null) loggerName = attributes.get("logger.name");
         if (loggerName == null) loggerName = textOrNull(source, "logger_name");
+        if (loggerName == null) {
+            JsonNode scopeNode = source.path("scope");
+            if (scopeNode.isMissingNode()) scopeNode = source.path("instrumentation_scope");
+            if (scopeNode.has("name")) {
+                String scopeName = scopeNode.get("name").asText();
+                if (scopeName != null && !scopeName.isBlank()) loggerName = scopeName;
+            }
+        }
 
-        // Extract line number: attributes.code.lineno > attributes.code.line_number
+        // Extract line number — try common locations
         Integer lineNumber = null;
         String lineStr = attributes.get("code.lineno");
         if (lineStr == null) lineStr = attributes.get("code.line_number");
+        if (lineStr == null) lineStr = attributes.get("code.lineNumber");
         if (lineStr != null) {
             try { lineNumber = Integer.parseInt(lineStr); } catch (NumberFormatException ignored) {}
         }
