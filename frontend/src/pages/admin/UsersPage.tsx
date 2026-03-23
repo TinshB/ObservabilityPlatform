@@ -13,6 +13,7 @@ import GroupIcon     from '@mui/icons-material/Group'
 import type { UserDetail, Role, PagedResponse } from '@/types'
 import * as userService from '@/services/userService'
 import * as roleService from '@/services/roleService'
+import { type FieldErrors, parseApiError, hasFieldErrors, clearFieldError } from '@/utils/formErrors'
 
 export default function UsersPage() {
   const [users, setUsers]       = useState<UserDetail[]>([])
@@ -26,11 +27,13 @@ export default function UsersPage() {
   // Create dialog
   const [createOpen, setCreateOpen]     = useState(false)
   const [createForm, setCreateForm]     = useState({ username: '', email: '', password: '', roleIds: [] as string[] })
+  const [createErrors, setCreateErrors] = useState<FieldErrors>({})
 
   // Edit dialog
   const [editOpen, setEditOpen]         = useState(false)
   const [editUser, setEditUser]         = useState<UserDetail | null>(null)
   const [editForm, setEditForm]         = useState({ email: '', active: true })
+  const [editErrors, setEditErrors]     = useState<FieldErrors>({})
 
   // Roles dialog
   const [rolesOpen, setRolesOpen]       = useState(false)
@@ -67,10 +70,14 @@ export default function UsersPage() {
       setSnackbar({ open: true, message: 'User created successfully', severity: 'success' })
       setCreateOpen(false)
       setCreateForm({ username: '', email: '', password: '', roleIds: [] })
+      setCreateErrors({})
       fetchUsers()
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to create user'
-      setSnackbar({ open: true, message: msg, severity: 'error' })
+    } catch (err: unknown) {
+      const { fieldErrors, message } = parseApiError(err)
+      setCreateErrors(fieldErrors)
+      if (!hasFieldErrors(fieldErrors)) {
+        setSnackbar({ open: true, message, severity: 'error' })
+      }
     }
   }
 
@@ -78,6 +85,7 @@ export default function UsersPage() {
   const openEdit = (user: UserDetail) => {
     setEditUser(user)
     setEditForm({ email: user.email, active: user.active })
+    setEditErrors({})
     setEditOpen(true)
   }
 
@@ -87,10 +95,14 @@ export default function UsersPage() {
       await userService.updateUser(editUser.id, editForm)
       setSnackbar({ open: true, message: 'User updated successfully', severity: 'success' })
       setEditOpen(false)
+      setEditErrors({})
       fetchUsers()
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to update user'
-      setSnackbar({ open: true, message: msg, severity: 'error' })
+    } catch (err: unknown) {
+      const { fieldErrors, message } = parseApiError(err)
+      setEditErrors(fieldErrors)
+      if (!hasFieldErrors(fieldErrors)) {
+        setSnackbar({ open: true, message, severity: 'error' })
+      }
     }
   }
 
@@ -193,15 +205,21 @@ export default function UsersPage() {
       </TableContainer>
 
       {/* ── Create User Dialog ──────────────────────────────────── */}
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={createOpen} onClose={() => { setCreateOpen(false); setCreateErrors({}) }} maxWidth="sm" fullWidth>
         <DialogTitle>Create User</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
           <TextField label="Username" required value={createForm.username}
-            onChange={(e) => setCreateForm(f => ({ ...f, username: e.target.value }))} />
+            error={!!createErrors.username}
+            helperText={createErrors.username}
+            onChange={(e) => { setCreateForm(f => ({ ...f, username: e.target.value })); setCreateErrors(prev => clearFieldError(prev, 'username')) }} />
           <TextField label="Email" type="email" required value={createForm.email}
-            onChange={(e) => setCreateForm(f => ({ ...f, email: e.target.value }))} />
+            error={!!createErrors.email}
+            helperText={createErrors.email}
+            onChange={(e) => { setCreateForm(f => ({ ...f, email: e.target.value })); setCreateErrors(prev => clearFieldError(prev, 'email')) }} />
           <TextField label="Password" type="password" required value={createForm.password}
-            onChange={(e) => setCreateForm(f => ({ ...f, password: e.target.value }))} />
+            error={!!createErrors.password}
+            helperText={createErrors.password}
+            onChange={(e) => { setCreateForm(f => ({ ...f, password: e.target.value })); setCreateErrors(prev => clearFieldError(prev, 'password')) }} />
           <FormControl>
             <InputLabel>Roles</InputLabel>
             <Select multiple value={createForm.roleIds} input={<OutlinedInput label="Roles" />}
@@ -226,11 +244,13 @@ export default function UsersPage() {
       </Dialog>
 
       {/* ── Edit User Dialog ────────────────────────────────────── */}
-      <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={editOpen} onClose={() => { setEditOpen(false); setEditErrors({}) }} maxWidth="sm" fullWidth>
         <DialogTitle>Edit User: {editUser?.username}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
           <TextField label="Email" type="email" value={editForm.email}
-            onChange={(e) => setEditForm(f => ({ ...f, email: e.target.value }))} />
+            error={!!editErrors.email}
+            helperText={editErrors.email}
+            onChange={(e) => { setEditForm(f => ({ ...f, email: e.target.value })); setEditErrors(prev => clearFieldError(prev, 'email')) }} />
           <FormControlLabel
             control={<Switch checked={editForm.active} onChange={(e) => setEditForm(f => ({ ...f, active: e.target.checked }))} />}
             label={editForm.active ? 'Active' : 'Inactive'}

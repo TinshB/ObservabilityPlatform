@@ -1,9 +1,10 @@
 """
 Error diagnosis service — matches trace error spans against an LLM for fix suggestions.
 
-Supports two LLM providers:
+Supports three LLM providers:
   - OpenAI  (default)
   - Anthropic (Claude)
+  - Google Gemini
 
 Provider, API key, and model are passed from the Spring Boot service via gRPC
 (read from application.yml). Falls back to environment variables if not provided.
@@ -113,6 +114,21 @@ def _call_anthropic(user_prompt: str, api_key: str, model: str) -> tuple[str, st
     return raw, model
 
 
+def _call_gemini(user_prompt: str, api_key: str, model: str) -> tuple[str, str]:
+    from google import genai
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model=model,
+        contents=f"{_SYSTEM_PROMPT}\n\n{user_prompt}",
+        config=genai.types.GenerateContentConfig(
+            response_mime_type="application/json",
+            max_output_tokens=4096,
+        ),
+    )
+    raw = response.text or ""
+    return raw, model
+
+
 # ── Main entry point ─────────────────────────────────────────────────────────
 
 def diagnose(trace_id, error_spans, associated_logs=None, language_hint="",
@@ -140,6 +156,9 @@ def diagnose(trace_id, error_spans, associated_logs=None, language_hint="",
     if provider == "anthropic":
         api_key = llm_api_key or os.environ.get("ANTHROPIC_API_KEY", "")
         model = llm_model or os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+    elif provider == "gemini":
+        api_key = llm_api_key or os.environ.get("GEMINI_API_KEY", "")
+        model = llm_model or os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
     else:
         api_key = llm_api_key or os.environ.get("OPENAI_API_KEY", "")
         model = llm_model or os.environ.get("OPENAI_MODEL", "gpt-4o")
@@ -166,6 +185,8 @@ def diagnose(trace_id, error_spans, associated_logs=None, language_hint="",
     try:
         if provider == "anthropic":
             raw, used_model = _call_anthropic(user_prompt, api_key, model)
+        elif provider == "gemini":
+            raw, used_model = _call_gemini(user_prompt, api_key, model)
         else:
             raw, used_model = _call_openai(user_prompt, api_key, model)
 

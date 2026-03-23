@@ -12,6 +12,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import type { Role, Permission } from '@/types'
 import * as roleService from '@/services/roleService'
 import { useAuth } from '@/hooks/useAuth'
+import { type FieldErrors, parseApiError, hasFieldErrors, clearFieldError } from '@/utils/formErrors'
 
 /** Permissions that only SUPER_ADMIN can assign — ADMIN cannot select these. */
 const RESTRICTED_PERMISSIONS = new Set([
@@ -35,6 +36,7 @@ export default function RolesPage() {
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState({ name: '', description: '', permissionIds: [] as string[] })
+  const [createErrors, setCreateErrors] = useState<FieldErrors>({})
 
   // Edit permissions dialog
   const [permOpen, setPermOpen]           = useState(false)
@@ -72,10 +74,14 @@ export default function RolesPage() {
       setSnackbar({ open: true, message: 'Role created successfully', severity: 'success' })
       setCreateOpen(false)
       setCreateForm({ name: '', description: '', permissionIds: [] })
+      setCreateErrors({})
       fetchData()
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to create role'
-      setSnackbar({ open: true, message: msg, severity: 'error' })
+    } catch (err: unknown) {
+      const { fieldErrors, message } = parseApiError(err)
+      setCreateErrors(fieldErrors)
+      if (!hasFieldErrors(fieldErrors)) {
+        setSnackbar({ open: true, message, severity: 'error' })
+      }
     }
   }
 
@@ -261,11 +267,13 @@ export default function RolesPage() {
       </TableContainer>
 
       {/* ── Create Role Dialog ──────────────────────────────────── */}
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={createOpen} onClose={() => { setCreateOpen(false); setCreateErrors({}) }} maxWidth="md" fullWidth>
         <DialogTitle>Create Role</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
           <TextField label="Role Name" required value={createForm.name}
-            onChange={(e) => setCreateForm(f => ({ ...f, name: e.target.value }))} />
+            error={!!createErrors.name}
+            helperText={createErrors.name}
+            onChange={(e) => { setCreateForm(f => ({ ...f, name: e.target.value })); setCreateErrors(prev => clearFieldError(prev, 'name')) }} />
           <TextField label="Description" value={createForm.description}
             onChange={(e) => setCreateForm(f => ({ ...f, description: e.target.value }))} />
           <Divider />

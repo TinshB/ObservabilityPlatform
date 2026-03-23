@@ -21,13 +21,25 @@ public class LlmConfig {
 
     private String anthropicModel = "claude-sonnet-4-20250514";
 
+    private String geminiApiKey = "";
+
+    private String geminiModel = "gemini-2.5-flash";
+
     /** Return the API key for the active provider. */
     public String getActiveApiKey() {
-        return "anthropic".equalsIgnoreCase(provider) ? anthropicApiKey : openaiApiKey;
+        return switch (provider.toLowerCase()) {
+            case "anthropic" -> anthropicApiKey;
+            case "gemini" -> geminiApiKey;
+            default -> openaiApiKey;
+        };
     }
 
     /** Return the model for the active provider. */
     public String getActiveModel() {
-        return "anthropic".equalsIgnoreCase(provider) ? anthropicModel : openaiModel;
+        return switch (provider.toLowerCase()) {
+            case "anthropic" -> anthropicModel;
+            case "gemini" -> geminiModel;
+            default -> openaiModel;
+        };
     }
 }

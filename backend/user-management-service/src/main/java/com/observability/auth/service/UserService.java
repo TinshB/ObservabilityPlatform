@@ -51,10 +51,10 @@ public class UserService {
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new ConflictException("User", request.getUsername());
+            throw ConflictException.forField("username", "A user with this username already exists");
         }
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new ConflictException("User with email", request.getEmail());
+            throw ConflictException.forField("email", "A user with this email already exists");
         }
 
         Set<Role> roles = resolveRoles(request.getRoleIds());
@@ -82,7 +82,7 @@ public class UserService {
 
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new ConflictException("User with email", request.getEmail());
+                throw ConflictException.forField("email", "A user with this email already exists");
             }
             user.setEmail(request.getEmail());
         }

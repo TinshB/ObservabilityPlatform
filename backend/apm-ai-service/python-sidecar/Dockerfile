@@ -20,5 +20,7 @@ ENV OPENAI_API_KEY=""
 ENV OPENAI_MODEL="gpt-4o"
 ENV ANTHROPIC_API_KEY=""
 ENV ANTHROPIC_MODEL="claude-sonnet-4-20250514"
+ENV GEMINI_API_KEY=""
+ENV GEMINI_MODEL="gemini-2.5-flash"
 
 CMD ["python", "server.py", "--port", "50051"]

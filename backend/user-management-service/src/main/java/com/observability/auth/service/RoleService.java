@@ -44,7 +44,7 @@ public class RoleService {
     @Transactional
     public RoleResponse createRole(RoleRequest request) {
         if (roleRepository.findByName(request.getName()).isPresent()) {
-            throw new ConflictException("Role", request.getName());
+            throw ConflictException.forField("name", "A role with this name already exists");
         }
 
         Set<Permission> permissions = resolvePermissions(request.getPermissionIds());
@@ -69,7 +69,7 @@ public class RoleService {
         // Check name conflict if changing name
         if (!role.getName().equalsIgnoreCase(request.getName())) {
             if (roleRepository.findByName(request.getName().toUpperCase()).isPresent()) {
-                throw new ConflictException("Role", request.getName());
+                throw ConflictException.forField("name", "A role with this name already exists");
             }
             role.setName(request.getName().toUpperCase());
         }

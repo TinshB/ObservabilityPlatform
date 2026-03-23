@@ -119,7 +119,7 @@ message ErrorDiagnosisRequest {
 }
 
 message LlmConfig {
-  string provider = 1;                   // "openai" or "anthropic"
+  string provider = 1;                   // "openai", "anthropic", or "gemini"
   string api_key = 2;
   string model = 3;
 }

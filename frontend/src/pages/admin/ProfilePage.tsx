@@ -6,16 +6,18 @@ import {
 import PersonIcon from '@mui/icons-material/Person'
 import { useAuth } from '@/hooks/useAuth'
 import * as userService from '@/services/userService'
+import { type FieldErrors, parseApiError, hasFieldErrors, clearFieldError } from '@/utils/formErrors'
 
 export default function ProfilePage() {
   const { user } = useAuth()
-  const [form, setForm]         = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' })
-  const [saving, setSaving]     = useState(false)
+  const [form, setForm]             = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
+  const [snackbar, setSnackbar]     = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' })
+  const [saving, setSaving]         = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
   const handleChangePassword = async () => {
     if (form.newPassword !== form.confirmPassword) {
-      setSnackbar({ open: true, message: 'Passwords do not match', severity: 'error' })
+      setFieldErrors({ confirmPassword: 'Passwords do not match' })
       return
     }
     if (!user) return
@@ -28,9 +30,13 @@ export default function ProfilePage() {
       })
       setSnackbar({ open: true, message: 'Password changed successfully', severity: 'success' })
       setForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to change password'
-      setSnackbar({ open: true, message: msg, severity: 'error' })
+      setFieldErrors({})
+    } catch (err: unknown) {
+      const { fieldErrors: fe, message } = parseApiError(err)
+      setFieldErrors(fe)
+      if (!hasFieldErrors(fe)) {
+        setSnackbar({ open: true, message, severity: 'error' })
+      }
     } finally {
       setSaving(false)
     }
@@ -84,14 +90,17 @@ export default function ProfilePage() {
         <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>Change Password</Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <TextField label="Current Password" type="password" value={form.currentPassword}
-            onChange={(e) => setForm(f => ({ ...f, currentPassword: e.target.value }))} />
+            error={!!fieldErrors.currentPassword}
+            helperText={fieldErrors.currentPassword}
+            onChange={(e) => { setForm(f => ({ ...f, currentPassword: e.target.value })); setFieldErrors(prev => clearFieldError(prev, 'currentPassword')) }} />
           <TextField label="New Password" type="password" value={form.newPassword}
-            onChange={(e) => setForm(f => ({ ...f, newPassword: e.target.value }))}
-            helperText="Minimum 6 characters" />
+            error={!!fieldErrors.newPassword}
+            helperText={fieldErrors.newPassword || 'Minimum 6 characters'}
+            onChange={(e) => { setForm(f => ({ ...f, newPassword: e.target.value })); setFieldErrors(prev => clearFieldError(prev, 'newPassword')) }} />
           <TextField label="Confirm New Password" type="password" value={form.confirmPassword}
-            onChange={(e) => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
-            error={form.confirmPassword !== '' && form.newPassword !== form.confirmPassword}
-            helperText={form.confirmPassword !== '' && form.newPassword !== form.confirmPassword ? 'Passwords do not match' : ''} />
+            error={!!fieldErrors.confirmPassword || (form.confirmPassword !== '' && form.newPassword !== form.confirmPassword)}
+            helperText={fieldErrors.confirmPassword || (form.confirmPassword !== '' && form.newPassword !== form.confirmPassword ? 'Passwords do not match' : '')}
+            onChange={(e) => { setForm(f => ({ ...f, confirmPassword: e.target.value })); setFieldErrors(prev => clearFieldError(prev, 'confirmPassword')) }} />
           <Button variant="contained" onClick={handleChangePassword} disabled={saving || !form.currentPassword || !form.newPassword || !form.confirmPassword}
             sx={{ alignSelf: 'flex-start' }}>
             {saving ? 'Saving...' : 'Change Password'}

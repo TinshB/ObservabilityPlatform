@@ -40,9 +40,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleObservabilityException(
             ObservabilityException ex, HttpServletRequest request) {
         log.warn("ObservabilityException [{}] at {}: {}", ex.getErrorCode(), request.getRequestURI(), ex.getMessage());
-        return ResponseEntity
-                .status(ex.getHttpStatus())
-                .body(buildErrorResponse(ex.getErrorCode(), ex.getMessage(), request));
+
+        ErrorResponse body = buildErrorResponse(ex.getErrorCode(), ex.getMessage(), request);
+
+        // Propagate field-level info so the frontend can highlight the right input
+        String field = extractField(ex);
+        if (field != null) {
+            body.setValidationErrors(List.of(
+                    ErrorResponse.FieldValidationError.builder()
+                            .field(field)
+                            .message(ex.getMessage())
+                            .build()
+            ));
+        }
+
+        return ResponseEntity.status(ex.getHttpStatus()).body(body);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -112,6 +124,13 @@ public class GlobalExceptionHandler {
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /** Extract the field name from exceptions that carry one, or {@code null}. */
+    private String extractField(ObservabilityException ex) {
+        if (ex instanceof ValidationException ve) return ve.getField();
+        if (ex instanceof ConflictException ce) return ce.getField();
+        return null;
+    }
 
     private ErrorResponse buildErrorResponse(String errorCode, String message, HttpServletRequest request) {
         return ErrorResponse.builder()
