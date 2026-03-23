@@ -146,7 +146,12 @@ public class ElasticsearchQueryService {
                             ),
                     Void.class);
 
-            var dateBuckets = response.aggregations().get("by_day").dateHistogram().buckets().array();
+            var byDayAgg = response.aggregations().get("by_day");
+            if (byDayAgg == null) {
+                log.debug("No 'by_day' aggregation returned — alert index may be empty");
+                return trends;
+            }
+            var dateBuckets = byDayAgg.dateHistogram().buckets().array();
             for (var dateBucket : dateBuckets) {
                 int critical = 0, warning = 0, infoCount = 0;
                 var severityBuckets = dateBucket.aggregations().get("by_severity").sterms().buckets().array();

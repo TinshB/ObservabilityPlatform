@@ -9,9 +9,6 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "report")
 public class ReportProperties {
 
-    /** Directory where generated PDF reports are stored. */
-    private String storageDir = "/tmp/reports";
-
     /** Maximum number of days to retain generated reports. */
     private int retentionDays = 30;
 

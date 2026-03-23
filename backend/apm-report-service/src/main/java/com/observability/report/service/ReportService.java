@@ -26,6 +26,11 @@ import java.util.UUID;
  * Story 14.1 — Main Report Service.
  * Handles report CRUD, triggers async generation, and provides query capabilities.
  */
+
+/**
+ * Story 14.1 — Main Report Service.
+ * Handles report CRUD, triggers async generation, and provides query capabilities.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -34,6 +39,7 @@ public class ReportService {
     private final ReportRepository reportRepository;
     private final ReportGenerationService reportGenerationService;
     private final ReportMapper reportMapper;
+    private final MinioStorageService minioStorageService;
 
     /**
      * Trigger async report generation. Returns immediately with QUEUED status.
@@ -122,11 +128,7 @@ public class ReportService {
                 .orElseThrow(() -> new ResourceNotFoundException("Report not found: " + reportId));
 
         if (report.getFilePath() != null) {
-            try {
-                java.nio.file.Files.deleteIfExists(java.nio.file.Path.of(report.getFilePath()));
-            } catch (Exception e) {
-                log.warn("Failed to delete report file {}: {}", report.getFilePath(), e.getMessage());
-            }
+            minioStorageService.delete(report.getFilePath());
         }
 
         reportRepository.delete(report);

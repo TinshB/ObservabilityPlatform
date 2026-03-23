@@ -103,6 +103,13 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
 
+        <!-- ── MinIO S3-compatible object storage ─────────────────────────── -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.14</version>
+        </dependency>
+
         <!-- ── Elasticsearch Java Client (alert/log aggregations) ─────────── -->
         <dependency>
             <groupId>co.elastic.clients</groupId>

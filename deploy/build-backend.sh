@@ -140,6 +140,14 @@ build_docker_python_sidecar() {
     info "  ✓ obs/python-sidecar:${IMAGE_TAG}"
 }
 
+build_docker_flyway() {
+    log "Building Docker image: obs/flyway-migrate:${IMAGE_TAG} ..."
+    docker build \
+        -t "obs/flyway-migrate:${IMAGE_TAG}" \
+        "${PROJECT_ROOT}/flyway"
+    info "  ✓ obs/flyway-migrate:${IMAGE_TAG}"
+}
+
 # ── Build all backend ─────────────────────────────────────────────
 
 build_all() {
@@ -150,6 +158,7 @@ build_all() {
 
     # Step 2: Docker images
     log "=== Step 2/2: Docker Image Build ==="
+    build_docker_flyway
     for svc in "${JAVA_SERVICES[@]}"; do
         build_docker_java_service "$svc"
     done
@@ -183,7 +192,7 @@ case "$TARGET" in
         echo ""
         build_all
         ;;
-    user-management-service|apm-service|apm-report-service|apm-ai-service)
+    user-management-service|apm-service|apm-report-service|apm-ai-service|apm-billing-service)
         log "Building ${TARGET} (tag: ${IMAGE_TAG})"
         echo ""
         build_single "$TARGET"
@@ -193,6 +202,11 @@ case "$TARGET" in
         echo ""
         build_single "python-sidecar"
         ;;
+    flyway-migrate)
+        log "Building flyway-migrate (tag: ${IMAGE_TAG})"
+        echo ""
+        build_docker_flyway
+        ;;
     *)
         error "Unknown target: $TARGET
 Valid targets:
@@ -201,7 +215,9 @@ Valid targets:
   apm-service               APM core service (port 8082)
   apm-report-service        Report service (port 8084)
   apm-ai-service            AI service (port 8085)
-  python-sidecar            Python ML sidecar (port 50051)"
+  apm-billing-service       Billing service (port 8086)
+  python-sidecar            Python ML sidecar (port 50051)
+  flyway-migrate            Flyway database migration image"
         ;;
 esac
 

@@ -12,13 +12,12 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.File;
 import java.time.Instant;
 import java.util.UUID;
 
 /**
  * Story 14.1 — Async report generation service.
- * Orchestrates data gathering, PDF rendering, and status tracking.
+ * Orchestrates data gathering, PDF rendering, MinIO upload, and status tracking.
  */
 @Slf4j
 @Service
@@ -29,6 +28,7 @@ public class ReportGenerationService {
     private final KpiReportGenerator kpiReportGenerator;
     private final PerformanceReportGenerator performanceReportGenerator;
     private final PdfRenderingService pdfRenderingService;
+    private final MinioStorageService minioStorageService;
 
     /**
      * Asynchronously generate a report. Updates status in the database as it progresses.
@@ -46,7 +46,7 @@ public class ReportGenerationService {
         try {
             updateStatus(report, ReportStatus.GENERATING);
 
-            String filePath;
+            String objectKey;
 
             if (report.getReportType() == ReportType.KPI) {
                 KpiReportData data = kpiReportGenerator.generate(
@@ -54,22 +54,22 @@ public class ReportGenerationService {
                         report.getTimeRangeStart(),
                         report.getTimeRangeEnd(),
                         report.getServiceName());
-                filePath = pdfRenderingService.renderKpiReport(data, reportId);
+                objectKey = pdfRenderingService.renderKpiReport(data, reportId);
             } else {
                 PerformanceReportData data = performanceReportGenerator.generate(
                         report.getName(),
                         report.getTimeRangeStart(),
                         report.getTimeRangeEnd(),
                         report.getServiceName());
-                filePath = pdfRenderingService.renderPerformanceReport(data, reportId);
+                objectKey = pdfRenderingService.renderPerformanceReport(data, reportId);
             }
 
-            report.setFilePath(filePath);
-            report.setFileSizeBytes(new File(filePath).length());
+            report.setFilePath(objectKey);
+            report.setFileSizeBytes(minioStorageService.getObjectSize(objectKey));
             report.setCompletedAt(Instant.now());
             updateStatus(report, ReportStatus.COMPLETED);
 
-            log.info("Report {} generated successfully: {}", reportId, filePath);
+            log.info("Report {} generated successfully: {}", reportId, objectKey);
         } catch (Exception e) {
             log.error("Report generation failed for report {}: {}", reportId, e.getMessage(), e);
             report.setErrorMessage(e.getMessage());

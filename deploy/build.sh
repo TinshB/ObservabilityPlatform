@@ -49,7 +49,7 @@ case "$TARGET" in
     frontend)
         "${SCRIPT_DIR}/build-frontend.sh"
         ;;
-    python-sidecar|user-management-service|apm-service|apm-report-service|apm-ai-service)
+    python-sidecar|user-management-service|apm-service|apm-report-service|apm-ai-service|apm-billing-service|flyway-migrate)
         "${SCRIPT_DIR}/build-backend.sh" "$TARGET"
         ;;
     *)
@@ -62,7 +62,9 @@ Valid targets:
   apm-service               Build APM service
   apm-report-service        Build report service
   apm-ai-service            Build AI service
-  python-sidecar            Build Python ML sidecar"
+  apm-billing-service       Build billing service
+  python-sidecar            Build Python ML sidecar
+  flyway-migrate            Build Flyway migration image"
         ;;
 esac
 

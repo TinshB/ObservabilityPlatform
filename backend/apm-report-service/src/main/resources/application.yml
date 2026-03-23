@@ -90,9 +90,15 @@ elasticsearch:
 jwt:
   secret: ${JWT_SECRET:bXktc3VwZXItc2VjcmV0LWtleS1mb3Itand0LXRva2VuLXNpZ25pbmctdGhhdC1pcy1sb25nLWVub3VnaC1mb3ItaG1hYy1zaGE1MTI=}
 
+# ── MinIO object storage ─────────────────────────────────────────────────────
+minio:
+  url: ${MINIO_URL:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket: ${MINIO_BUCKET:reports}
+
 # ── Report configuration ─────────────────────────────────────────────────────
 report:
-  storage-dir: ${REPORT_STORAGE_DIR:/tmp/reports}
   retention-days: ${REPORT_RETENTION_DAYS:30}
   email-from: ${REPORT_EMAIL_FROM:reports@observability-platform.local}
   email-subject-prefix: ${REPORT_EMAIL_SUBJECT_PREFIX:[Observability Platform]}

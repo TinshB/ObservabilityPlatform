@@ -6,12 +6,11 @@ import com.observability.report.entity.ReportType;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.util.List;
 
 /**
@@ -24,6 +23,7 @@ public class EmailDeliveryService {
 
     private final JavaMailSender mailSender;
     private final ReportProperties reportProperties;
+    private final MinioStorageService minioStorageService;
 
     /**
      * Send a generated report PDF to the specified recipients.
@@ -48,11 +48,13 @@ public class EmailDeliveryService {
             helper.setSubject(buildSubject(report));
             helper.setText(buildEmailBody(report), true);
 
-            File pdfFile = new File(report.getFilePath());
-            if (pdfFile.exists()) {
-                FileSystemResource attachment = new FileSystemResource(pdfFile);
-                helper.addAttachment(pdfFile.getName(), attachment);
-            }
+            String objectKey = report.getFilePath();
+            String fileName = objectKey.contains("/")
+                    ? objectKey.substring(objectKey.lastIndexOf('/') + 1)
+                    : objectKey;
+
+            InputStreamSource attachment = () -> minioStorageService.getObject(objectKey);
+            helper.addAttachment(fileName, attachment, "application/pdf");
 
             mailSender.send(message);
             log.info("Report {} sent to {} recipients", report.getId(), recipients.size());

@@ -4,6 +4,7 @@ import com.observability.report.dto.GenerateReportRequest;
 import com.observability.report.dto.ReportResponse;
 import com.observability.report.entity.ReportStatus;
 import com.observability.report.entity.ReportType;
+import com.observability.report.service.MinioStorageService;
 import com.observability.report.service.ReportService;
 import com.observability.shared.dto.ApiResponse;
 import com.observability.shared.dto.PagedResponse;
@@ -12,18 +13,17 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.File;
+import java.io.InputStream;
 import java.util.UUID;
 
 @RestController
@@ -33,6 +33,7 @@ import java.util.UUID;
 public class ReportController {
 
     private final ReportService reportService;
+    private final MinioStorageService minioStorageService;
 
     @PostMapping("/generate")
     @Operation(summary = "Trigger report generation",
@@ -43,7 +44,7 @@ public class ReportController {
 
         String requestedBy = authentication.getName();
         ReportResponse response = reportService.generateReport(request, requestedBy);
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
+        return ResponseEntity.status(202)
                 .body(ApiResponse.created(response));
     }
 
@@ -72,18 +73,22 @@ public class ReportController {
     }
 
     @GetMapping("/{reportId}/download")
-    @Operation(summary = "Download a completed report PDF")
+    @Operation(summary = "Download a completed report PDF from MinIO")
     public ResponseEntity<Resource> downloadReport(@PathVariable UUID reportId) {
-        String filePath = reportService.getReportFilePath(reportId);
-        File file = new File(filePath);
+        String objectKey = reportService.getReportFilePath(reportId);
+        long size = minioStorageService.getObjectSize(objectKey);
+        InputStream stream = minioStorageService.getObject(objectKey);
 
-        Resource resource = new FileSystemResource(file);
+        String fileName = objectKey.contains("/")
+                ? objectKey.substring(objectKey.lastIndexOf('/') + 1)
+                : objectKey;
+
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + file.getName() + "\"")
-                .contentLength(file.length())
-                .body(resource);
+                        "attachment; filename=\"" + fileName + "\"")
+                .contentLength(size)
+                .body(new InputStreamResource(stream));
     }
 
     @DeleteMapping("/{reportId}")

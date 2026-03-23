@@ -44,9 +44,10 @@ warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 info()  { echo -e "${CYAN}[INFO]${NC} $1"; }
 
-INFRA_SERVICES="postgres redis elasticsearch prometheus jaeger otel-collector mailhog"
+INFRA_SERVICES="postgres redis elasticsearch prometheus jaeger otel-collector minio mailhog"
+FLYWAY_SERVICE="flyway-migrate"
 APP_SERVICES="user-management-service apm-service apm-report-service python-sidecar apm-ai-service apm-billing-service"
-ALL_BACKEND="${INFRA_SERVICES} ${APP_SERVICES}"
+ALL_BACKEND="${INFRA_SERVICES} ${FLYWAY_SERVICE} ${APP_SERVICES}"
 
 # ── Docker Compose wrapper ────────────────────────────────────────
 
@@ -108,7 +109,16 @@ do_up() {
     info "Waiting for infrastructure health checks ..."
     sleep 10
 
-    info "Phase 2: Starting backend application services ..."
+    info "Phase 2: Running Flyway database migrations ..."
+    compose up --build $FLYWAY_SERVICE
+    local flyway_exit
+    flyway_exit=$(docker inspect obs-flyway-migrate --format='{{.State.ExitCode}}' 2>/dev/null || echo "1")
+    if [ "$flyway_exit" != "0" ]; then
+        error "Flyway migration failed (exit code: ${flyway_exit}). Check logs: docker logs obs-flyway-migrate"
+    fi
+    log "Flyway migrations completed successfully."
+
+    info "Phase 3: Starting backend application services ..."
     compose up -d $APP_SERVICES
     info "Waiting for services to become healthy ..."
     sleep 15
@@ -140,6 +150,15 @@ do_infra() {
     info "Waiting for infrastructure health checks ..."
     sleep 10
     do_health_infra
+    echo ""
+    info "Running Flyway database migrations ..."
+    compose up --build $FLYWAY_SERVICE
+    local flyway_exit
+    flyway_exit=$(docker inspect obs-flyway-migrate --format='{{.State.ExitCode}}' 2>/dev/null || echo "1")
+    if [ "$flyway_exit" != "0" ]; then
+        error "Flyway migration failed (exit code: ${flyway_exit}). Check logs: docker logs obs-flyway-migrate"
+    fi
+    log "Flyway migrations completed successfully."
 }
 
 do_services() {
@@ -189,6 +208,7 @@ do_health_infra() {
     echo -n "  Elasticsearch: "; curl -sf http://localhost:9200/_cluster/health 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" 2>/dev/null || echo -e "${RED}FAIL${NC}"
     echo -n "  Prometheus:    "; curl -sf http://localhost:9090/-/healthy > /dev/null && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}"
     echo -n "  Jaeger:        "; curl -sf -o /dev/null http://localhost:16686 && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}"
+    echo -n "  MinIO:         "; curl -sf -o /dev/null http://localhost:9000/minio/health/live && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}"
     echo -n "  MailHog:       "; curl -sf -o /dev/null http://localhost:8025 && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}"
 }
 
@@ -218,13 +238,13 @@ do_health() {
 
 do_clean() {
     warn "This will stop all backend containers AND delete all data volumes!"
-    warn "Affected volumes: pgdata, redisdata, esdata, promdata, reportdata"
+    warn "Affected volumes: pgdata, redisdata, esdata, promdata, miniodata"
     read -rp "Are you sure? (y/N): " confirm
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
         compose stop $APP_SERVICES 2>/dev/null || true
         compose stop $INFRA_SERVICES 2>/dev/null || true
         compose rm -f $ALL_BACKEND 2>/dev/null || true
-        docker volume rm observability_pgdata observability_redisdata observability_esdata observability_promdata observability_reportdata 2>/dev/null || true
+        docker volume rm observability_pgdata observability_redisdata observability_esdata observability_promdata observability_miniodata 2>/dev/null || true
         log "All backend containers stopped and volumes removed."
     else
         log "Cancelled."

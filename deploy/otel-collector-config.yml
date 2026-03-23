@@ -8,11 +8,89 @@ receivers:
             - "*"
 
 processors:
+  # ── Memory Limiter ─────────────────────────────────────────────
+  # Prevents OOM — must be FIRST in every pipeline
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # ── Batch ──────────────────────────────────────────────────────
   batch:
     timeout: 5s
     send_batch_size: 1000
     send_batch_max_size: 1000
 
+  # ── Trace Filters ─────────────────────────────────────────────
+  # Drops health-check, readiness, and other noisy spans
+  filter/traces:
+    error_mode: ignore
+    traces:
+      span:
+        - 'attributes["http.target"] == "/health"'
+        - 'attributes["http.target"] == "/healthz"'
+        - 'attributes["http.target"] == "/ready"'
+        - 'attributes["http.target"] == "/readyz"'
+        - 'attributes["http.target"] == "/livez"'
+        - 'attributes["http.target"] == "/actuator/health"'
+        - 'attributes["http.target"] == "/actuator/info"'
+        - 'attributes["http.target"] == "/actuator/prometheus"'
+        - 'attributes["http.target"] == "/favicon.ico"'
+        - 'attributes["url.path"] == "/health"'
+        - 'attributes["url.path"] == "/healthz"'
+        - 'attributes["url.path"] == "/ready"'
+        - 'attributes["url.path"] == "/actuator/health"'
+        - 'attributes["url.path"] == "/favicon.ico"'
+        - 'attributes["http.route"] == "/health"'
+        - 'attributes["http.route"] == "/healthz"'
+        - 'attributes["http.route"] == "/actuator/health"'
+        - 'IsMatch(name, ".*health.*check.*")'
+
+  # ── Log Filters ────────────────────────────────────────────────
+  # Drops sub-INFO logs and health-check noise from logs pipeline
+  filter/logs:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'severity_number < SEVERITY_NUMBER_INFO'
+        - 'IsMatch(body, ".*healthcheck.*")'
+        - 'IsMatch(body, ".*favicon\\.ico.*")'
+
+  # ── Metric Filters ────────────────────────────────────────────
+  # Drops internal collector metrics that add noise
+  filter/metrics:
+    error_mode: ignore
+    metrics:
+      metric:
+        - 'name == "otelcol_process_uptime"'
+        - 'name == "otelcol_process_runtime_total_alloc_bytes"'
+        - 'name == "otelcol_process_runtime_heap_alloc_bytes"'
+        - 'name == "otelcol_process_runtime_total_sys_memory_bytes"'
+
+  # ── Tail Sampling (Traces) ────────────────────────────────────
+  # Smart sampling: keeps all errors & slow traces, samples the rest
+  # Adjust sampling_percentage to control trace volume
+  tail_sampling:
+    decision_wait: 10s
+    num_traces: 100000
+    expected_new_traces_per_sec: 100
+    policies:
+      # Always keep traces with errors
+      - name: errors-always-keep
+        type: status_code
+        status_code:
+          status_codes:
+            - ERROR
+      # Always keep traces slower than 1 second
+      - name: slow-traces-always-keep
+        type: latency
+        latency:
+          threshold_ms: 1000
+      # Sample 20% of remaining successful traces (tune this value)
+      - name: probabilistic-sample
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 20
 
 exporters:
 
@@ -53,19 +131,20 @@ exporters:
        enabled: true
        num_consumers: 20
        queue_size: 1000
+
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch]
+      processors: [memory_limiter, filter/traces, tail_sampling, batch]
       exporters: [debug, otlp]
     logs:
       receivers: [otlp]
-      processors: [batch]
+      processors: [memory_limiter, filter/logs, batch]
       exporters: [elasticsearch/log]
     metrics:
       receivers: [otlp]
-      processors: [batch]
+      processors: [memory_limiter, filter/metrics, batch]
       exporters: [prometheusremotewrite]
   telemetry:
     logs:
