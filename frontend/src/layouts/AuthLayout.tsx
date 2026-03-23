@@ -294,10 +294,6 @@ export default function AuthLayout() {
           <Paper sx={{ p: 4 }} variant="outlined">
             <Outlet />
           </Paper>
-
-          <Typography variant="caption" color="text.disabled" sx={{ mt: 3, textAlign: 'center', display: 'block' }}>
-            Built on OpenTelemetry, Jaeger, Prometheus & Elasticsearch
-          </Typography>
         </Box>
       </Box>
     </Box>
