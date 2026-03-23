@@ -37,8 +37,9 @@ const ServiceDeepDivePage = lazy(() => import('@/pages/services/ServiceDeepDiveP
 const ApmOverviewPage     = lazy(() => import('@/pages/apm/ApmOverviewPage'))
 
 // Sprint 10
-const AlertsPage   = lazy(() => import('@/pages/alerts/AlertsPage'))
-const SlaRulesPage = lazy(() => import('@/pages/alerts/SlaRulesPage'))
+const AlertsPage        = lazy(() => import('@/pages/alerts/AlertsPage'))
+const SlaRulesPage      = lazy(() => import('@/pages/alerts/SlaRulesPage'))
+const AlertChannelsPage = lazy(() => import('@/pages/alerts/AlertChannelsPage'))
 
 // Sprint 11
 const AlertHistoryPage  = lazy(() => import('@/pages/alerts/AlertHistoryPage'))
@@ -98,6 +99,7 @@ export default function AppRoutes() {
             <Route path="/alerts" element={<ErrorBoundary><AlertsPage /></ErrorBoundary>} />
             <Route path="/alerts/history" element={<ErrorBoundary><AlertHistoryPage /></ErrorBoundary>} />
             <Route path="/sla-rules" element={<ErrorBoundary><SlaRulesPage /></ErrorBoundary>} />
+            <Route path="/alerts/channels" element={<ErrorBoundary><AlertChannelsPage /></ErrorBoundary>} />
             <Route path="/dependencies" element={<ErrorBoundary><DependencyMapPage /></ErrorBoundary>} />
             <Route path="/workflows" element={<ErrorBoundary><WorkflowListPage /></ErrorBoundary>} />
             <Route path="/workflows/:workflowId" element={<ErrorBoundary><WorkflowBuilderPage /></ErrorBoundary>} />

@@ -217,10 +217,19 @@ public class TraceService {
         Integer httpStatusCode = null;
         String httpMethod = tags.get("http.method");
         String httpUrl = tags.get("http.url");
+        String httpRoute = tags.get("http.route");
         if (tags.containsKey("http.status_code")) {
             try {
                 httpStatusCode = Integer.parseInt(tags.get("http.status_code"));
             } catch (NumberFormatException ignored) {}
+        }
+
+        // When http.route is absent, enrich the operation name with http.method + http.url
+        String operationName = span.getOperationName();
+        if (httpRoute == null && httpUrl != null) {
+            operationName = httpMethod != null
+                    ? httpMethod + " " + httpUrl
+                    : httpUrl;
         }
 
         boolean hasError = isErrorSpan(span);
@@ -243,7 +252,7 @@ public class TraceService {
         return TraceDetailResponse.SpanDetail.builder()
                 .spanId(span.getSpanId())
                 .parentSpanId(parentSpanId)
-                .operationName(span.getOperationName())
+                .operationName(operationName)
                 .serviceName(serviceName)
                 .startTime(span.getStartTime())
                 .durationMicros(span.getDuration())

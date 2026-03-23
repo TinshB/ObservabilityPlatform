@@ -169,6 +169,7 @@ export interface ServiceMetricsResponse {
   latencyP99:  TimeSeries | null
   errorRate:   TimeSeries | null
   requestRate: TimeSeries | null
+  totalRequestCount: number | null
   current:     InstantMetrics | null
 }
 

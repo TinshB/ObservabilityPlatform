@@ -78,6 +78,7 @@ public class MetricsService {
         TimeSeries latP99 = queryLatencyPercentile(serviceName, 0.99, rateWindow, start, end, stepSeconds, "latency_p99");
         TimeSeries errRate = queryErrorRate(serviceName, rateWindow, start, end, stepSeconds);
         TimeSeries rps = queryRequestRate(serviceName, rateWindow, start, end, stepSeconds);
+        long totalRequests = queryTotalRequestCount(serviceName, start, end);
 
         // Build instant queries for current values
         ServiceMetricsResponse.InstantMetrics current = ServiceMetricsResponse.InstantMetrics.builder()
@@ -95,6 +96,7 @@ public class MetricsService {
                 .latencyP99(latP99)
                 .errorRate(errRate)
                 .requestRate(rps)
+                .totalRequestCount(totalRequests)
                 .current(current)
                 .build();
     }
@@ -225,6 +227,22 @@ public class MetricsService {
                 .labels(Map.of(SERVICE_LABEL, serviceName))
                 .dataPoints(points)
                 .build();
+    }
+
+    private long queryTotalRequestCount(String serviceName, Instant start, Instant end) {
+        // increase(count_total{service}[range]) gives the total count over the window.
+        // We compute: sum(count @ end) - sum(count @ start)
+        String inner = PromQLBuilder.metric(COUNT_METRIC)
+                .label(SERVICE_LABEL, serviceName)
+                .build();
+        String queryEnd = "sum(" + inner + ")";
+
+        Double valEnd = extractInstantValue(prometheusClient.query(queryEnd, end));
+        Double valStart = extractInstantValue(prometheusClient.query(queryEnd, start));
+
+        if (valEnd == null) return 0L;
+        if (valStart == null) return Math.round(valEnd);
+        return Math.max(0L, Math.round(valEnd - valStart));
     }
 
     // ── Instant query helpers ───────────────────────────────────────────────────

@@ -34,6 +34,9 @@ public class ServiceMetricsResponse {
     /** Requests per second over time. */
     private TimeSeries requestRate;
 
+    /** Total request count in the selected time range. */
+    private Long totalRequestCount;
+
     /** Current instant values for dashboard cards. */
     private InstantMetrics current;
 

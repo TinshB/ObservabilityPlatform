@@ -108,15 +108,20 @@ public class WorkflowService {
         findWorkflowById(workflowId);
         validateHttpMethod(request.getHttpMethod());
 
-        workflowStepRepository.findByWorkflowIdAndStepOrder(workflowId, request.getStepOrder())
-                .ifPresent(existing -> {
-                    throw new IllegalArgumentException(
-                            "Step order " + request.getStepOrder() + " already exists for this workflow");
-                });
+        int stepOrder;
+        if (request.getStepOrder() == null) {
+            // Auto-assign next available step order
+            stepOrder = workflowStepRepository.findMaxStepOrder(workflowId) + 1;
+        } else {
+            stepOrder = request.getStepOrder();
+            // If the requested order conflicts, shift existing steps to make room
+            workflowStepRepository.findByWorkflowIdAndStepOrder(workflowId, stepOrder)
+                    .ifPresent(existing -> workflowStepRepository.shiftStepOrdersUp(workflowId, stepOrder));
+        }
 
         WorkflowStepEntity entity = WorkflowStepEntity.builder()
                 .workflowId(workflowId)
-                .stepOrder(request.getStepOrder())
+                .stepOrder(stepOrder)
                 .serviceName(request.getServiceName())
                 .httpMethod(request.getHttpMethod().toUpperCase())
                 .pathPattern(request.getPathPattern())

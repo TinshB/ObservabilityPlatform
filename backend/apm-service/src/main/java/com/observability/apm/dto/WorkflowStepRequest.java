@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class WorkflowStepRequest {
 
-    @NotNull
+    /** Step order within the workflow. Auto-assigned to next available order if omitted. */
     private Integer stepOrder;
 
     @NotBlank

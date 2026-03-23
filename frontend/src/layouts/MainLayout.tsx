@@ -36,6 +36,7 @@ import HubIcon             from '@mui/icons-material/Hub'
 import NotificationsIcon   from '@mui/icons-material/Notifications'
 import HistoryIcon         from '@mui/icons-material/History'
 import RuleIcon            from '@mui/icons-material/Rule'
+import CampaignIcon        from '@mui/icons-material/Campaign'
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined'
 import AssessmentIcon     from '@mui/icons-material/Assessment'
 import NetworkCheckIcon   from '@mui/icons-material/NetworkCheck'
@@ -76,6 +77,7 @@ const NAV_ITEMS = [
   { label: 'Dependencies',   icon: <HubIcon />,             path: '/dependencies' },
   { label: 'Alerts',         icon: <NotificationsIcon />, path: '/alerts' },
   { label: 'SLA Rules',     icon: <RuleIcon />,            path: '/sla-rules' },
+  { label: 'Channels',      icon: <CampaignIcon />,        path: '/alerts/channels' },
   { label: 'Workflows',     icon: <AccountTreeOutlinedIcon />, path: '/workflows' },
   { label: 'Reports',       icon: <AssessmentIcon />,          path: '/reports' },
   { label: 'Synthetic Monitoring', icon: <NetworkCheckIcon />, path: '/synthetic' },

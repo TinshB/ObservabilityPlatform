@@ -11,9 +11,7 @@ import java.util.UUID;
  * Represents a single ordered step (API endpoint) in a business workflow.
  */
 @Entity
-@Table(name = "workflow_steps", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"workflow_id", "step_order"})
-})
+@Table(name = "workflow_steps")
 @Getter
 @Setter
 @Builder

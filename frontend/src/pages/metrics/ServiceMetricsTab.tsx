@@ -75,8 +75,8 @@ export default function ServiceMetricsTab({ serviceId, serviceName, params }: Pr
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Grid container spacing={2}>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Grid item xs={6} sm={4} md={2.4} key={i}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Grid item xs={6} sm={4} md={2} key={i}>
               <Skeleton variant="rounded" height={90} />
             </Grid>
           ))}
@@ -124,19 +124,22 @@ export default function ServiceMetricsTab({ serviceId, serviceName, params }: Pr
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* ── Instant metric cards ────────────────────────────────────────── */}
       <Grid container spacing={2}>
-        <Grid item xs={6} sm={4} md={2.4}>
+        <Grid item xs={6} sm={4} md={2}>
+          <MetricCard title="Total Requests" value={data.totalRequestCount != null ? formatNumber(data.totalRequestCount) : 'N/A'} subtitle="in selected range" />
+        </Grid>
+        <Grid item xs={6} sm={4} md={2}>
           <MetricCard title="P50 Latency" value={formatLatency(current?.latencyP50)} />
         </Grid>
-        <Grid item xs={6} sm={4} md={2.4}>
+        <Grid item xs={6} sm={4} md={2}>
           <MetricCard title="P95 Latency" value={formatLatency(current?.latencyP95)} />
         </Grid>
-        <Grid item xs={6} sm={4} md={2.4}>
+        <Grid item xs={6} sm={4} md={2}>
           <MetricCard title="P99 Latency" value={formatLatency(current?.latencyP99)} />
         </Grid>
-        <Grid item xs={6} sm={4} md={2.4}>
+        <Grid item xs={6} sm={4} md={2}>
           <MetricCard title="Error Rate" value={formatPercent(current?.errorRate)} />
         </Grid>
-        <Grid item xs={6} sm={4} md={2.4}>
+        <Grid item xs={6} sm={4} md={2}>
           <MetricCard title="Request Rate" value={current?.requestRate != null ? `${formatNumber(current.requestRate)} req/s` : 'N/A'} />
         </Grid>
       </Grid>

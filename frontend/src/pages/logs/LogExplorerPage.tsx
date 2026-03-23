@@ -159,7 +159,7 @@ function LogRow({ entry }: { entry: LogEntry }) {
                   fontSize: '0.8rem',
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-all',
-                  maxHeight: 200,
+                  maxHeight: 400,
                   overflow: 'auto',
                 }}
               >
@@ -228,17 +228,43 @@ function LogRow({ entry }: { entry: LogEntry }) {
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Attributes
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {Object.entries(entry.attributes).map(([key, value]) => (
-                      <Chip
-                        key={key}
-                        label={`${key}: ${value}`}
-                        size="small"
-                        variant="outlined"
-                        sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem' }}
-                      />
-                    ))}
-                  </Box>
+                  <Paper
+                    variant="outlined"
+                    sx={{ overflow: 'auto', maxHeight: 400 }}
+                  >
+                    <Table size="small">
+                      <TableBody>
+                        {Object.entries(entry.attributes).map(([key, value]) => (
+                          <TableRow key={key} sx={{ '&:last-child td': { borderBottom: 0 } }}>
+                            <TableCell
+                              sx={{
+                                fontFamily: '"JetBrains Mono", monospace',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                whiteSpace: 'nowrap',
+                                verticalAlign: 'top',
+                                color: 'text.secondary',
+                                width: 1,
+                                pr: 2,
+                              }}
+                            >
+                              {key}
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                fontFamily: '"JetBrains Mono", monospace',
+                                fontSize: '0.75rem',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-all',
+                              }}
+                            >
+                              {value}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Paper>
                 </>
               )}
 
