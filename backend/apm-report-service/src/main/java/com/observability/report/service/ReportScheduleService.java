@@ -39,10 +39,10 @@ public class ReportScheduleService {
             throw new ConflictException("Schedule with name '" + request.getName() + "' already exists");
         }
 
-        int hour = request.getScheduleHour() != null ? request.getScheduleHour() : 6;
-        int minute = request.getScheduleMinute() != null ? request.getScheduleMinute() : 0;
-        Integer dow = request.getDayOfWeek();
-        Integer dom = request.getDayOfMonth();
+        short hour = (short) (request.getScheduleHour() != null ? request.getScheduleHour() : 6);
+        short minute = (short) (request.getScheduleMinute() != null ? request.getScheduleMinute() : 0);
+        Short dow = request.getDayOfWeek() != null ? request.getDayOfWeek().shortValue() : null;
+        Short dom = request.getDayOfMonth() != null ? request.getDayOfMonth().shortValue() : null;
 
         String cronExpression = buildCron(request.getFrequency(), hour, minute, dow, dom);
 
@@ -91,16 +91,16 @@ public class ReportScheduleService {
             schedule.setName(request.getName());
         }
         if (request.getScheduleHour() != null) {
-            schedule.setScheduleHour(request.getScheduleHour());
+            schedule.setScheduleHour(request.getScheduleHour().shortValue());
         }
         if (request.getScheduleMinute() != null) {
-            schedule.setScheduleMinute(request.getScheduleMinute());
+            schedule.setScheduleMinute(request.getScheduleMinute().shortValue());
         }
         if (request.getDayOfWeek() != null) {
-            schedule.setDayOfWeek(request.getDayOfWeek());
+            schedule.setDayOfWeek(request.getDayOfWeek().shortValue());
         }
         if (request.getDayOfMonth() != null) {
-            schedule.setDayOfMonth(request.getDayOfMonth());
+            schedule.setDayOfMonth(request.getDayOfMonth().shortValue());
         }
         if (request.getFrequency() != null) {
             schedule.setFrequency(request.getFrequency());
@@ -142,8 +142,8 @@ public class ReportScheduleService {
     /**
      * Build a cron expression from frequency + custom time/day selections.
      */
-    private String buildCron(ScheduleFrequency frequency, int hour, int minute,
-                              Integer dayOfWeek, Integer dayOfMonth) {
+    private String buildCron(ScheduleFrequency frequency, short hour, short minute,
+                              Short dayOfWeek, Short dayOfMonth) {
         return switch (frequency) {
             case DAILY -> String.format("0 %d %d * * *", minute, hour);
             case WEEKLY -> {

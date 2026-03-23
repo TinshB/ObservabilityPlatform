@@ -22,10 +22,10 @@ public class ReportScheduleResponse {
     private ReportType reportType;
     private ScheduleFrequency frequency;
     private String cronExpression;
-    private int scheduleHour;
-    private int scheduleMinute;
-    private Integer dayOfWeek;
-    private Integer dayOfMonth;
+    private short scheduleHour;
+    private short scheduleMinute;
+    private Short dayOfWeek;
+    private Short dayOfMonth;
     private List<String> recipients;
     private UUID serviceId;
     private String serviceName;

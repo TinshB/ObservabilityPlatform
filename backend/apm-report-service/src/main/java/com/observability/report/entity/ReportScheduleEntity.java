@@ -42,19 +42,19 @@ public class ReportScheduleEntity {
     @Column(name = "service_name", length = 255)
     private String serviceName;
 
-    @Column(name = "schedule_hour", nullable = false)
+    @Column(name = "schedule_hour", nullable = false, columnDefinition = "smallint")
     @Builder.Default
-    private int scheduleHour = 6;
+    private short scheduleHour = 6;
 
-    @Column(name = "schedule_minute", nullable = false)
+    @Column(name = "schedule_minute", nullable = false, columnDefinition = "smallint")
     @Builder.Default
-    private int scheduleMinute = 0;
+    private short scheduleMinute = 0;
 
-    @Column(name = "day_of_week")
-    private Integer dayOfWeek;
+    @Column(name = "day_of_week", columnDefinition = "smallint")
+    private Short dayOfWeek;
 
-    @Column(name = "day_of_month")
-    private Integer dayOfMonth;
+    @Column(name = "day_of_month", columnDefinition = "smallint")
+    private Short dayOfMonth;
 
     @Column(name = "is_active", nullable = false)
     private boolean active;
