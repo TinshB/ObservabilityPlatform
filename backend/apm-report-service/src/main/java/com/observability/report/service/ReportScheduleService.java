@@ -39,13 +39,22 @@ public class ReportScheduleService {
             throw new ConflictException("Schedule with name '" + request.getName() + "' already exists");
         }
 
-        String cronExpression = frequencyToCron(request.getFrequency());
+        int hour = request.getScheduleHour() != null ? request.getScheduleHour() : 6;
+        int minute = request.getScheduleMinute() != null ? request.getScheduleMinute() : 0;
+        Integer dow = request.getDayOfWeek();
+        Integer dom = request.getDayOfMonth();
+
+        String cronExpression = buildCron(request.getFrequency(), hour, minute, dow, dom);
 
         ReportScheduleEntity schedule = ReportScheduleEntity.builder()
                 .name(request.getName())
                 .reportType(request.getReportType())
                 .frequency(request.getFrequency())
                 .cronExpression(cronExpression)
+                .scheduleHour(hour)
+                .scheduleMinute(minute)
+                .dayOfWeek(dow)
+                .dayOfMonth(dom)
                 .recipients(String.join(",", request.getRecipients()))
                 .serviceId(request.getServiceId())
                 .serviceName(request.getServiceName())
@@ -81,10 +90,25 @@ public class ReportScheduleService {
         if (request.getName() != null) {
             schedule.setName(request.getName());
         }
+        if (request.getScheduleHour() != null) {
+            schedule.setScheduleHour(request.getScheduleHour());
+        }
+        if (request.getScheduleMinute() != null) {
+            schedule.setScheduleMinute(request.getScheduleMinute());
+        }
+        if (request.getDayOfWeek() != null) {
+            schedule.setDayOfWeek(request.getDayOfWeek());
+        }
+        if (request.getDayOfMonth() != null) {
+            schedule.setDayOfMonth(request.getDayOfMonth());
+        }
         if (request.getFrequency() != null) {
             schedule.setFrequency(request.getFrequency());
-            schedule.setCronExpression(frequencyToCron(request.getFrequency()));
         }
+        // Rebuild cron from current state
+        schedule.setCronExpression(buildCron(
+                schedule.getFrequency(), schedule.getScheduleHour(), schedule.getScheduleMinute(),
+                schedule.getDayOfWeek(), schedule.getDayOfMonth()));
         if (request.getRecipients() != null && !request.getRecipients().isEmpty()) {
             schedule.setRecipients(String.join(",", request.getRecipients()));
         }
@@ -113,14 +137,25 @@ public class ReportScheduleService {
         return scheduleRepository.findByActiveTrue();
     }
 
+    private static final String[] CRON_DAYS = {"", "MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"};
+
     /**
-     * Convert a ScheduleFrequency enum to a cron expression.
+     * Build a cron expression from frequency + custom time/day selections.
      */
-    private String frequencyToCron(ScheduleFrequency frequency) {
+    private String buildCron(ScheduleFrequency frequency, int hour, int minute,
+                              Integer dayOfWeek, Integer dayOfMonth) {
         return switch (frequency) {
-            case DAILY -> "0 0 6 * * *";    // Every day at 06:00 UTC
-            case WEEKLY -> "0 0 6 * * MON";  // Every Monday at 06:00 UTC
-            case MONTHLY -> "0 0 6 1 * *";   // First of every month at 06:00 UTC
+            case DAILY -> String.format("0 %d %d * * *", minute, hour);
+            case WEEKLY -> {
+                String dow = (dayOfWeek != null && dayOfWeek >= 1 && dayOfWeek <= 7)
+                        ? CRON_DAYS[dayOfWeek] : "MON";
+                yield String.format("0 %d %d * * %s", minute, hour, dow);
+            }
+            case MONTHLY -> {
+                int dom = (dayOfMonth != null && dayOfMonth >= 1 && dayOfMonth <= 28)
+                        ? dayOfMonth : 1;
+                yield String.format("0 %d %d %d * *", minute, hour, dom);
+            }
         };
     }
 }

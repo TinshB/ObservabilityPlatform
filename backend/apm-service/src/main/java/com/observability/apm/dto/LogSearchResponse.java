@@ -51,6 +51,12 @@ public class LogSearchResponse {
         /** Log message body. */
         private String body;
 
+        /** Logger name / class path (e.g. com.observability.apm.service.MetricsService). */
+        private String loggerName;
+
+        /** Source code line number (nullable). */
+        private Integer lineNumber;
+
         /** Trace ID for trace correlation (nullable). */
         private String traceId;
 

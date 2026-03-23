@@ -131,6 +131,23 @@ function LogRow({ entry }: { entry: LogEntry }) {
         <TableCell
           sx={{
             fontFamily: '"JetBrains Mono", monospace',
+            fontSize: '0.75rem',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: 220,
+            color: 'text.secondary',
+          }}
+        >
+          {entry.loggerName
+            ? entry.lineNumber
+              ? `${entry.loggerName}:${entry.lineNumber}`
+              : entry.loggerName
+            : '—'}
+        </TableCell>
+        <TableCell
+          sx={{
+            fontFamily: '"JetBrains Mono", monospace',
             fontSize: '0.8rem',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -144,9 +161,30 @@ function LogRow({ entry }: { entry: LogEntry }) {
       {/* Expanded detail row */}
       {open && (
       <TableRow>
-        <TableCell colSpan={5} sx={{ py: 0, borderBottom: 'unset' }}>
+        <TableCell colSpan={6} sx={{ py: 0, borderBottom: 'unset' }}>
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box sx={{ p: 2, backgroundColor: 'action.hover', borderRadius: 1, my: 1 }}>
+              {/* Log location */}
+              {entry.loggerName && (
+                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="subtitle2" color="text.secondary">Location:</Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', fontWeight: 600 }}
+                  >
+                    {entry.loggerName}{entry.lineNumber != null ? `:${entry.lineNumber}` : ''}
+                  </Typography>
+                  <Tooltip title="Copy location">
+                    <IconButton size="small" onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation()
+                      handleCopy(entry.loggerName + (entry.lineNumber != null ? `:${entry.lineNumber}` : ''))
+                    }}>
+                      <ContentCopyIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              )}
+
               {/* Full log body */}
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 Message
@@ -623,7 +661,8 @@ export default function LogExplorerPage() {
               <col style={{ width: 48 }} />
               <col style={{ width: 180 }} />
               <col style={{ width: 90 }} />
-              <col style={{ width: 140 }} />
+              <col style={{ width: 130 }} />
+              <col style={{ width: 220 }} />
               <col />
             </colgroup>
             <TableHead>
@@ -632,6 +671,7 @@ export default function LogExplorerPage() {
                 <TableCell sx={{ fontWeight: 600 }}>Timestamp</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Severity</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Service</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Location</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Message</TableCell>
               </TableRow>
             </TableHead>
@@ -643,12 +683,13 @@ export default function LogExplorerPage() {
                     <TableCell><Skeleton variant="text" width={150} /></TableCell>
                     <TableCell><Skeleton variant="rounded" width={56} height={24} /></TableCell>
                     <TableCell><Skeleton variant="text" width={100} /></TableCell>
+                    <TableCell><Skeleton variant="text" width={180} /></TableCell>
                     <TableCell><Skeleton variant="text" /></TableCell>
                   </TableRow>
                 ))
               ) : entries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 6 }}>
+                  <TableCell colSpan={6} sx={{ textAlign: 'center', py: 6 }}>
                     <Typography variant="body1" color="text.secondary">
                       No log entries found
                     </Typography>

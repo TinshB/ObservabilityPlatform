@@ -89,9 +89,19 @@ function formatSegment(segment: string): string {
 // ── Breadcrumb Component ────────────────────────────────────────────────────
 
 export default function AppBreadcrumbs() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const { labels } = useContext(BreadcrumbContext)
+
+  /**
+   * Navigate to a breadcrumb target. When the target is a parent of the
+   * current path, preserve search params so filters (serviceId, range, etc.)
+   * survive back-navigation (e.g. Trace Detail → Traces list).
+   */
+  const handleNavigate = (targetPath: string) => {
+    const isParent = pathname.startsWith(targetPath) && pathname !== targetPath
+    navigate(isParent ? targetPath + search : targetPath)
+  }
 
   const segments = pathname.split('/').filter(Boolean)
 
@@ -143,7 +153,7 @@ export default function AppBreadcrumbs() {
               underline="hover"
               color="inherit"
               variant="body2"
-              onClick={() => navigate(crumb.path)}
+              onClick={() => handleNavigate(crumb.path)}
               sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
             >
               <HomeIcon sx={{ fontSize: 16 }} />
@@ -156,7 +166,7 @@ export default function AppBreadcrumbs() {
               underline="hover"
               color="inherit"
               variant="body2"
-              onClick={() => navigate(crumb.path)}
+              onClick={() => handleNavigate(crumb.path)}
             >
               {crumb.label}
             </Link>

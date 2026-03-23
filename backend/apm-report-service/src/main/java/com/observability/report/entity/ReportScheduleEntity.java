@@ -42,6 +42,20 @@ public class ReportScheduleEntity {
     @Column(name = "service_name", length = 255)
     private String serviceName;
 
+    @Column(name = "schedule_hour", nullable = false)
+    @Builder.Default
+    private int scheduleHour = 6;
+
+    @Column(name = "schedule_minute", nullable = false)
+    @Builder.Default
+    private int scheduleMinute = 0;
+
+    @Column(name = "day_of_week")
+    private Integer dayOfWeek;
+
+    @Column(name = "day_of_month")
+    private Integer dayOfMonth;
+
     @Column(name = "is_active", nullable = false)
     private boolean active;
 

@@ -2,6 +2,8 @@ package com.observability.apm.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -32,6 +34,7 @@ public class AlertChannelEntity {
     private String channelType;
 
     /** JSONB config — channel-specific details */
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "config", columnDefinition = "jsonb", nullable = false)
     private String config;
 

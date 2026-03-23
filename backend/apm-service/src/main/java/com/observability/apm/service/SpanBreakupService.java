@@ -71,7 +71,8 @@ public class SpanBreakupService {
             String serviceName = process != null ? process.getServiceName() : "unknown";
             distinctServices.add(serviceName);
 
-            String key = serviceName + "::" + span.getOperationName();
+            String resolvedOp = resolveOperationName(span);
+            String key = serviceName + "::" + resolvedOp;
             grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(span);
         }
 
@@ -83,7 +84,7 @@ public class SpanBreakupService {
 
             JaegerProcess process = processes.get(firstSpan.getProcessId());
             String serviceName = process != null ? process.getServiceName() : "unknown";
-            String operationName = firstSpan.getOperationName();
+            String operationName = resolveOperationName(firstSpan);
 
             long totalDuration = 0;
             long selfTime = 0;
@@ -161,6 +162,31 @@ public class SpanBreakupService {
                 .map(JaegerResponse.JaegerReference::getSpanId)
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * Resolve a human-readable operation name: use http.route if available,
+     * otherwise fall back to http.method + http.url (same logic as TraceService).
+     */
+    private String resolveOperationName(JaegerSpan span) {
+        String operationName = span.getOperationName();
+        if (span.getTags() == null) return operationName;
+
+        String httpRoute = null;
+        String httpUrl = null;
+        String httpMethod = null;
+        for (var tag : span.getTags()) {
+            switch (tag.getKey()) {
+                case "http.route"  -> httpRoute = String.valueOf(tag.getValue());
+                case "http.url"    -> httpUrl = String.valueOf(tag.getValue());
+                case "http.method" -> httpMethod = String.valueOf(tag.getValue());
+            }
+        }
+
+        if (httpRoute == null && httpUrl != null) {
+            return httpMethod != null ? httpMethod + " " + httpUrl : httpUrl;
+        }
+        return operationName;
     }
 
     private boolean isErrorSpan(JaegerSpan span) {

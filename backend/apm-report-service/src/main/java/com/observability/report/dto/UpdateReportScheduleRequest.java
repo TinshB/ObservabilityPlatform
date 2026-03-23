@@ -20,5 +20,13 @@ public class UpdateReportScheduleRequest {
 
     private List<String> recipients;
 
+    private Integer scheduleHour;
+
+    private Integer scheduleMinute;
+
+    private Integer dayOfWeek;
+
+    private Integer dayOfMonth;
+
     private Boolean active;
 }

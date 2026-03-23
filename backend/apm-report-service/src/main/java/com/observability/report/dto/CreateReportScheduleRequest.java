@@ -31,6 +31,18 @@ public class CreateReportScheduleRequest {
     @NotEmpty(message = "At least one recipient email is required")
     private List<String> recipients;
 
+    /** Hour of the day to run (0-23 UTC). Defaults to 6. */
+    private Integer scheduleHour;
+
+    /** Minute of the hour to run (0-59). Defaults to 0. */
+    private Integer scheduleMinute;
+
+    /** Day of week for WEEKLY frequency (1=MON..7=SUN). Defaults to 1 (Monday). */
+    private Integer dayOfWeek;
+
+    /** Day of month for MONTHLY frequency (1-28). Defaults to 1. */
+    private Integer dayOfMonth;
+
     private UUID serviceId;
 
     private String serviceName;

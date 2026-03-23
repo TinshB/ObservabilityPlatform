@@ -314,7 +314,12 @@ export default function TraceViewerPage() {
   const calendarOpen = Boolean(calendarAnchor)
 
   const handleTraceClick = (traceId: string) => {
-    navigate(`/traces/${encodeURIComponent(traceId)}`)
+    // Carry service + range context so breadcrumb back-nav preserves filters
+    const params = new URLSearchParams()
+    if (selectedService) params.set('service', selectedService.id)
+    if (selectedRange) params.set('range', selectedRange)
+    const qs = params.toString()
+    navigate(`/traces/${encodeURIComponent(traceId)}${qs ? `?${qs}` : ''}`)
   }
 
   const handleLoadMore = () => {

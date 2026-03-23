@@ -324,6 +324,8 @@ export interface LogEntry {
   severity:    LogSeverity
   serviceName: string | null
   body:        string | null
+  loggerName:  string | null
+  lineNumber:  number | null
   traceId:     string | null
   spanId:      string | null
   attributes:  Record<string, string>
@@ -944,6 +946,10 @@ export interface ReportSchedule {
   reportType:     ReportType
   frequency:      ScheduleFrequency
   cronExpression: string
+  scheduleHour:   number
+  scheduleMinute: number
+  dayOfWeek?:     number   // 1=MON..7=SUN
+  dayOfMonth?:    number   // 1-28
   recipients:     string[]
   serviceId?:     string
   serviceName?:   string
@@ -955,12 +961,16 @@ export interface ReportSchedule {
 }
 
 export interface CreateReportSchedulePayload {
-  name:        string
-  reportType:  ReportType
-  frequency:   ScheduleFrequency
-  recipients:  string[]
-  serviceId?:  string
-  serviceName?: string
+  name:           string
+  reportType:     ReportType
+  frequency:      ScheduleFrequency
+  recipients:     string[]
+  scheduleHour?:  number
+  scheduleMinute?: number
+  dayOfWeek?:     number
+  dayOfMonth?:    number
+  serviceId?:     string
+  serviceName?:   string
 }
 
 export interface UpdateReportSchedulePayload {

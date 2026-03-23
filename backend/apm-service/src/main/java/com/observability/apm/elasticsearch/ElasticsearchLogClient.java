@@ -313,11 +313,26 @@ public class ElasticsearchLogClient {
                     attributes.put(field.getKey(), field.getValue().asText()));
         }
 
+        // Extract logger name: attributes.logger_name > attributes.code.namespace > logger_name (top-level)
+        String loggerName = attributes.get("logger_name");
+        if (loggerName == null) loggerName = attributes.get("code.namespace");
+        if (loggerName == null) loggerName = textOrNull(source, "logger_name");
+
+        // Extract line number: attributes.code.lineno > attributes.code.line_number
+        Integer lineNumber = null;
+        String lineStr = attributes.get("code.lineno");
+        if (lineStr == null) lineStr = attributes.get("code.line_number");
+        if (lineStr != null) {
+            try { lineNumber = Integer.parseInt(lineStr); } catch (NumberFormatException ignored) {}
+        }
+
         return LogSearchResponse.LogEntry.builder()
                 .timestamp(timestamp)
                 .severity(severity != null ? severity : "INFO")
                 .serviceName(serviceName)
                 .body(body)
+                .loggerName(loggerName)
+                .lineNumber(lineNumber)
                 .traceId(traceId)
                 .spanId(spanId)
                 .attributes(attributes)

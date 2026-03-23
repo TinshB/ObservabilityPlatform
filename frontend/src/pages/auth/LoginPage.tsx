@@ -36,14 +36,12 @@ export default function LoginPage() {
   const [usernameError, setUsernameError]     = useState('')
   const [passwordError, setPasswordError]     = useState('')
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/home'
-
-  // Redirect immediately if already authenticated
+  // Redirect immediately if already authenticated — always go to /home
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(from, { replace: true })
+      navigate('/home', { replace: true })
     }
-  }, [isAuthenticated, navigate, from])
+  }, [isAuthenticated, navigate])
 
   // Clear server error when the user starts typing
   useEffect(() => {

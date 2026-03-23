@@ -113,6 +113,10 @@ export default function ReportsPage() {
     name: '',
     reportType: 'KPI' as ReportType,
     frequency: 'WEEKLY' as ScheduleFrequency,
+    scheduleHour: 6,
+    scheduleMinute: 0,
+    dayOfWeek: 1,
+    dayOfMonth: 1,
     recipients: '',
     serviceName: '',
   })
@@ -236,12 +240,16 @@ export default function ReportsPage() {
         name: schedForm.name,
         reportType: schedForm.reportType,
         frequency: schedForm.frequency,
+        scheduleHour: schedForm.scheduleHour,
+        scheduleMinute: schedForm.scheduleMinute,
+        dayOfWeek: schedForm.frequency === 'WEEKLY' ? schedForm.dayOfWeek : undefined,
+        dayOfMonth: schedForm.frequency === 'MONTHLY' ? schedForm.dayOfMonth : undefined,
         recipients,
         serviceName: schedForm.serviceName || undefined,
       })
       setSnackbar({ open: true, message: 'Schedule created', severity: 'success' })
       setSchedOpen(false)
-      setSchedForm({ name: '', reportType: 'KPI', frequency: 'WEEKLY', recipients: '', serviceName: '' })
+      setSchedForm({ name: '', reportType: 'KPI', frequency: 'WEEKLY', scheduleHour: 6, scheduleMinute: 0, dayOfWeek: 1, dayOfMonth: 1, recipients: '', serviceName: '' })
       fetchSchedules()
     } catch (err: any) {
       setSnackbar({ open: true, message: err?.response?.data?.message || 'Failed to create schedule', severity: 'error' })
@@ -668,11 +676,75 @@ export default function ReportsPage() {
               label="Frequency"
               onChange={(e) => setSchedForm({ ...schedForm, frequency: e.target.value as ScheduleFrequency })}
             >
-              <MenuItem value="DAILY">Daily (06:00 UTC)</MenuItem>
-              <MenuItem value="WEEKLY">Weekly (Monday 06:00 UTC)</MenuItem>
-              <MenuItem value="MONTHLY">Monthly (1st, 06:00 UTC)</MenuItem>
+              <MenuItem value="DAILY">Daily</MenuItem>
+              <MenuItem value="WEEKLY">Weekly</MenuItem>
+              <MenuItem value="MONTHLY">Monthly</MenuItem>
             </Select>
           </FormControl>
+
+          {/* Day selector for WEEKLY */}
+          {schedForm.frequency === 'WEEKLY' && (
+            <FormControl fullWidth>
+              <InputLabel>Day of Week</InputLabel>
+              <Select
+                value={schedForm.dayOfWeek}
+                label="Day of Week"
+                onChange={(e) => setSchedForm({ ...schedForm, dayOfWeek: Number(e.target.value) })}
+              >
+                <MenuItem value={1}>Monday</MenuItem>
+                <MenuItem value={2}>Tuesday</MenuItem>
+                <MenuItem value={3}>Wednesday</MenuItem>
+                <MenuItem value={4}>Thursday</MenuItem>
+                <MenuItem value={5}>Friday</MenuItem>
+                <MenuItem value={6}>Saturday</MenuItem>
+                <MenuItem value={7}>Sunday</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+
+          {/* Day selector for MONTHLY */}
+          {schedForm.frequency === 'MONTHLY' && (
+            <FormControl fullWidth>
+              <InputLabel>Day of Month</InputLabel>
+              <Select
+                value={schedForm.dayOfMonth}
+                label="Day of Month"
+                onChange={(e) => setSchedForm({ ...schedForm, dayOfMonth: Number(e.target.value) })}
+              >
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                  <MenuItem key={d} value={d}>{d}{d === 1 ? 'st' : d === 2 ? 'nd' : d === 3 ? 'rd' : 'th'}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+
+          {/* Time picker (hour + minute) */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <FormControl sx={{ flex: 1 }}>
+              <InputLabel>Hour (UTC)</InputLabel>
+              <Select
+                value={schedForm.scheduleHour}
+                label="Hour (UTC)"
+                onChange={(e) => setSchedForm({ ...schedForm, scheduleHour: Number(e.target.value) })}
+              >
+                {Array.from({ length: 24 }, (_, i) => (
+                  <MenuItem key={i} value={i}>{String(i).padStart(2, '0')}:00</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl sx={{ flex: 1 }}>
+              <InputLabel>Minute</InputLabel>
+              <Select
+                value={schedForm.scheduleMinute}
+                label="Minute"
+                onChange={(e) => setSchedForm({ ...schedForm, scheduleMinute: Number(e.target.value) })}
+              >
+                {[0, 15, 30, 45].map((m) => (
+                  <MenuItem key={m} value={m}>:{String(m).padStart(2, '0')}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
           <TextField
             label="Recipients"
             value={schedForm.recipients}
