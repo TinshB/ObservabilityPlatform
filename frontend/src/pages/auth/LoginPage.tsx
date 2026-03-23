@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   Alert,
   Box,
@@ -26,7 +26,6 @@ import { getAzureSsoUrl } from '@/services/authService'
  */
 export default function LoginPage() {
   const navigate = useNavigate()
-  const location = useLocation()
   const { isAuthenticated, loading, error, login, clearError } = useAuth()
 
   const [username, setUsername]               = useState('')
