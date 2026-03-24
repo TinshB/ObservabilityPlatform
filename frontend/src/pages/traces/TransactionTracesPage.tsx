@@ -19,6 +19,7 @@ import {
   LinearProgress,
   Button,
   IconButton,
+  MenuItem,
   Popover,
   Checkbox,
   FormControlLabel,
@@ -29,14 +30,21 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ViewColumnIcon from '@mui/icons-material/ViewColumn'
-import type { TraceSummary, TraceSearchParams } from '@/types'
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
+import dayjs, { type Dayjs } from 'dayjs'
+import type { TraceSummary, TraceSearchParams, TimeRangePreset } from '@/types'
 import * as traceService from '@/services/traceService'
+import * as metricsService from '@/services/metricsService'
 import { useCustomBreadcrumbs } from '@/hooks/useBreadcrumb'
 import { formatDuration, formatTime, formatRootOperation } from '@/utils/traceUtils'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
 const DEFAULT_LIMIT = 20
+const DEFAULT_RANGE = 'LAST_15M'
 
 // ── Column definitions ──────────────────────────────────────────────────────
 
@@ -141,9 +149,74 @@ export default function TransactionTracesPage() {
 
   const serviceId   = searchParams.get('service') ?? ''
   const serviceName = searchParams.get('serviceName') ?? ''
-  const range       = searchParams.get('range') ?? ''
-  const start       = searchParams.get('start') ?? ''
-  const end         = searchParams.get('end') ?? ''
+
+  // ── Time range ──────────────────────────────────────────────────────
+  const [presets, setPresets]           = useState<TimeRangePreset[]>([])
+  const [selectedRange, setSelectedRange] = useState(
+    searchParams.get('range') || DEFAULT_RANGE,
+  )
+  const [customRange, setCustomRange]       = useState<{ start: Date; end: Date } | null>(null)
+  const [timeLabel, setTimeLabel]           = useState('Last 15 minutes')
+  const [calendarAnchor, setCalendarAnchor] = useState<HTMLElement | null>(null)
+  const [pickerStart, setPickerStart]       = useState<Dayjs | null>(null)
+  const [pickerEnd, setPickerEnd]           = useState<Dayjs | null>(null)
+
+  // Initialise from URL custom range params
+  useEffect(() => {
+    const urlStart = searchParams.get('start')
+    const urlEnd   = searchParams.get('end')
+    if (urlStart && urlEnd) {
+      setCustomRange({ start: new Date(urlStart), end: new Date(urlEnd) })
+      setSelectedRange('')
+      setTimeLabel(`${dayjs(urlStart).format('MMM D, HH:mm')} — ${dayjs(urlEnd).format('MMM D, HH:mm')}`)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load presets
+  useEffect(() => {
+    async function loadPresets() {
+      try {
+        setPresets(await metricsService.getTimeRangePresets())
+      } catch {
+        setPresets([
+          { key: 'LAST_15M', label: 'Last 15 minutes', durationSeconds: 900,     stepSeconds: 15,    rateWindow: '1m' },
+          { key: 'LAST_1H',  label: 'Last 1 hour',     durationSeconds: 3600,    stepSeconds: 30,    rateWindow: '2m' },
+          { key: 'LAST_3H',  label: 'Last 3 hours',    durationSeconds: 10800,   stepSeconds: 60,    rateWindow: '5m' },
+          { key: 'LAST_6H',  label: 'Last 6 hours',    durationSeconds: 21600,   stepSeconds: 120,   rateWindow: '5m' },
+          { key: 'LAST_12H', label: 'Last 12 hours',   durationSeconds: 43200,   stepSeconds: 300,   rateWindow: '10m' },
+          { key: 'LAST_24H', label: 'Last 24 hours',   durationSeconds: 86400,   stepSeconds: 600,   rateWindow: '15m' },
+          { key: 'LAST_3D',  label: 'Last 3 days',     durationSeconds: 259200,  stepSeconds: 1800,  rateWindow: '30m' },
+          { key: 'LAST_7D',  label: 'Last 7 days',     durationSeconds: 604800,  stepSeconds: 3600,  rateWindow: '1h' },
+          { key: 'LAST_30D', label: 'Last 30 days',    durationSeconds: 2592000, stepSeconds: 14400, rateWindow: '4h' },
+        ])
+      }
+    }
+    loadPresets()
+  }, [])
+
+  const rangeSeconds = useMemo(() => {
+    if (customRange) {
+      return Math.round((customRange.end.getTime() - customRange.start.getTime()) / 1000)
+    }
+    return presets.find(p => p.key === selectedRange)?.durationSeconds ?? 900
+  }, [selectedRange, customRange, presets])
+
+  const handleRangeChange = (range: string) => {
+    setSelectedRange(range)
+    setCustomRange(null)
+    const preset = presets.find(p => p.key === range)
+    setTimeLabel(preset?.label ?? range)
+  }
+
+  const handleApplyCustomRange = () => {
+    if (!pickerStart || !pickerEnd || !pickerStart.isBefore(pickerEnd)) return
+    setCustomRange({ start: pickerStart.toDate(), end: pickerEnd.toDate() })
+    setSelectedRange('')
+    setTimeLabel(`${pickerStart.format('MMM D, HH:mm')} — ${pickerEnd.format('MMM D, HH:mm')}`)
+    setCalendarAnchor(null)
+  }
+
+  const calendarOpen = Boolean(calendarAnchor)
 
   // ── Breadcrumb: Home → Transactions → <serviceName> → <operation> ──
   useCustomBreadcrumbs(
@@ -193,11 +266,11 @@ export default function TransactionTracesPage() {
         operation: decodedOperation,
         limit,
       }
-      if (start && end) {
-        params.start = start
-        params.end   = end
-      } else if (range) {
-        params.range = range
+      if (customRange) {
+        params.start = customRange.start.toISOString()
+        params.end   = customRange.end.toISOString()
+      } else if (selectedRange) {
+        params.range = selectedRange
       }
       if (minDuration.trim()) params.minDuration = minDuration.trim()
       if (maxDuration.trim()) params.maxDuration = maxDuration.trim()
@@ -212,18 +285,27 @@ export default function TransactionTracesPage() {
     } finally {
       setLoading(false)
     }
-  }, [serviceId, decodedOperation, range, start, end, minDuration, maxDuration, limit])
+  }, [serviceId, decodedOperation, selectedRange, customRange, minDuration, maxDuration, limit])
 
   useEffect(() => {
     fetchTraces()
   }, [fetchTraces])
 
   // ── Handlers ────────────────────────────────────────────────────────────
+  const buildTimeParams = (params: URLSearchParams) => {
+    if (customRange) {
+      params.set('start', customRange.start.toISOString())
+      params.set('end', customRange.end.toISOString())
+    } else if (selectedRange) {
+      params.set('range', selectedRange)
+    }
+  }
+
   const handleTraceClick = (traceId: string) => {
     const params = new URLSearchParams()
     if (serviceId) params.set('service', serviceId)
     if (serviceName) params.set('serviceName', serviceName)
-    if (range) params.set('range', range)
+    buildTimeParams(params)
     const qs = params.toString()
     navigate(`/transactions/${encodeURIComponent(operation ?? '')}/traces/${encodeURIComponent(traceId)}${qs ? `?${qs}` : ''}`)
   }
@@ -232,7 +314,7 @@ export default function TransactionTracesPage() {
     const params = new URLSearchParams()
     if (serviceId) params.set('service', serviceId)
     if (serviceName) params.set('serviceName', serviceName)
-    if (range) params.set('range', range)
+    buildTimeParams(params)
     const qs = params.toString()
     navigate(`/transactions${qs ? `?${qs}` : ''}`)
   }
@@ -305,8 +387,41 @@ export default function TransactionTracesPage() {
         </Box>
       </Box>
 
-      {/* ── Duration filters ──────────────────────────────────────────── */}
+      {/* ── Filter bar ─────────────────────────────────────────────────── */}
       <Paper variant="outlined" sx={{ p: 2, mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Time range */}
+        <TextField
+          select
+          label="Time Range"
+          size="small"
+          sx={{ minWidth: 170 }}
+          value={customRange ? '__CUSTOM__' : selectedRange}
+          onChange={(e) => {
+            if (e.target.value !== '__CUSTOM__') handleRangeChange(e.target.value)
+          }}
+        >
+          {presets.map((p) => (
+            <MenuItem key={p.key} value={p.key}>{p.label}</MenuItem>
+          ))}
+          {customRange && (
+            <MenuItem value="__CUSTOM__">{timeLabel}</MenuItem>
+          )}
+        </TextField>
+
+        <Tooltip title="Pick custom date range">
+          <IconButton
+            size="small"
+            onClick={(e: React.MouseEvent<HTMLElement>) => {
+              setPickerStart(customRange ? dayjs(customRange.start) : dayjs().subtract(rangeSeconds, 'second'))
+              setPickerEnd(customRange ? dayjs(customRange.end) : dayjs())
+              setCalendarAnchor(e.currentTarget)
+            }}
+          >
+            <CalendarMonthIcon />
+          </IconButton>
+        </Tooltip>
+
+        {/* Duration filters */}
         <TextField
           sx={{ width: 130 }}
           label="Min Duration"
@@ -559,6 +674,48 @@ export default function TransactionTracesPage() {
             />
           ))}
         </FormGroup>
+      </Popover>
+
+      {/* ── Calendar Popover ──────────────────────────────────────────── */}
+      <Popover
+        open={calendarOpen}
+        anchorEl={calendarAnchor}
+        onClose={() => setCalendarAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        slotProps={{ paper: { sx: { p: 2.5, width: 340 } } }}
+      >
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 1.5, display: 'block' }}>
+            Custom Date &amp; Time Range
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <DateTimePicker
+              label="From"
+              value={pickerStart}
+              onChange={(v) => setPickerStart(v)}
+              maxDateTime={pickerEnd ?? undefined}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }}
+            />
+            <DateTimePicker
+              label="To"
+              value={pickerEnd}
+              onChange={(v) => setPickerEnd(v)}
+              minDateTime={pickerStart ?? undefined}
+              maxDateTime={dayjs()}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }}
+            />
+            <Button
+              variant="contained"
+              size="small"
+              fullWidth
+              onClick={handleApplyCustomRange}
+              disabled={!pickerStart || !pickerEnd || !pickerStart.isBefore(pickerEnd)}
+            >
+              Apply Range
+            </Button>
+          </Box>
+        </LocalizationProvider>
       </Popover>
 
       {/* ── Snackbar ─────────────────────────────────────────────────── */}

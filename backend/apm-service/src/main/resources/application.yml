@@ -87,6 +87,8 @@ elasticsearch:
 # ── Query metrics (slow-query threshold) ─────────────────────────────────────
 metrics:
   slow-query-threshold-seconds: ${SLOW_QUERY_THRESHOLD:0.5}
+  query-metrics-source: ${QUERY_METRICS_SOURCE:jaeger}
+  jaeger-trace-limit: ${JAEGER_TRACE_LIMIT:5000}
 
 # ── Alert Engine (Story 10.2) ──────────────────────────────────────────────────
 alert:
