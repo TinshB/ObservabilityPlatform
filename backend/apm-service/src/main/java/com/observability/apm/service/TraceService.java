@@ -281,8 +281,9 @@ public class TraceService {
         if (httpMethod == null) httpMethod = tags.get("http.request.method");
         String httpUrl = tags.get("http.url");
         if (httpUrl == null) httpUrl = tags.get("url.full");
-        String httpRoute = tags.get("http.route");
-        if (httpRoute == null) httpRoute = tags.get("url.path");
+        String httpRoute = tags.get("url.path");
+        if (httpRoute == null) httpRoute = tags.get("http.target");
+        if (httpRoute == null) httpRoute = tags.get("http.route");
         Integer httpStatusCode = parseStatusCode(tags);
 
         // When http.route is absent, enrich the operation name with http.method + http.url
@@ -345,10 +346,10 @@ public class TraceService {
         if (method == null) method = tags.get("http.request.method");
         if (method != null) result.put("method", method);
 
-        // Route (template path like /api/v1/users/{id})
-        String route = tags.get("http.route");
+        // Path — prefer url.path (actual path) over http.route (template)
+        String route = tags.get("url.path");
         if (route == null) route = tags.get("http.target");
-        if (route == null) route = tags.get("url.path");
+        if (route == null) route = tags.get("http.route");
         if (route != null) result.put("route", route);
 
         // URL
