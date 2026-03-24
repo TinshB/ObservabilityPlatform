@@ -141,29 +141,30 @@ public class TraceService {
         Integer httpStatusCode = null;
         String httpMethod = null;
         String httpUrl = null;
-        String httpRoute = null;
+        String httpRoute = null;  // template (e.g. /api/v1/services/{id})
+        String httpPath = null;   // actual path (e.g. /api/v1/services/123)
 
-        // First pass: find the best span from the queried service (the service the user selected)
+        // First pass: find the best span from the queried service
         for (JaegerSpan span : spans) {
             JaegerProcess proc = processes.get(span.getProcessId());
             String spanService = proc != null ? proc.getServiceName() : "";
             if (!queriedService.equals(spanService)) continue;
 
             Map<String, String> tags = extractHttpTags(span);
-            String route = tags.get("route");
-            if (route != null) {
-                httpRoute = route;
+            if (tags.containsKey("route") || tags.containsKey("path")) {
+                httpRoute = tags.get("route");
+                httpPath = tags.get("path");
                 httpMethod = tags.get("method");
                 httpUrl = tags.get("url");
                 if (tags.containsKey("statusCode")) {
                     httpStatusCode = Integer.parseInt(tags.get("statusCode"));
                 }
-                break; // found a span with route from the queried service
+                break;
             }
-            // Even without route, capture method if available
             if (httpMethod == null && tags.containsKey("method")) {
                 httpMethod = tags.get("method");
                 httpUrl = tags.get("url");
+                httpPath = tags.get("path");
                 if (tags.containsKey("statusCode")) {
                     httpStatusCode = Integer.parseInt(tags.get("statusCode"));
                 }
@@ -171,10 +172,11 @@ public class TraceService {
         }
 
         // Second pass: if no route found from queried service, try root span, then any span
-        if (httpRoute == null) {
+        if (httpRoute == null && httpPath == null) {
             Map<String, String> rootTags = extractHttpTags(rootSpan);
-            if (rootTags.containsKey("route")) {
+            if (rootTags.containsKey("route") || rootTags.containsKey("path")) {
                 httpRoute = rootTags.get("route");
+                httpPath = rootTags.get("path");
                 if (httpMethod == null) httpMethod = rootTags.get("method");
                 if (httpUrl == null) httpUrl = rootTags.get("url");
                 if (httpStatusCode == null && rootTags.containsKey("statusCode")) {
@@ -183,8 +185,9 @@ public class TraceService {
             } else {
                 for (JaegerSpan span : spans) {
                     Map<String, String> tags = extractHttpTags(span);
-                    if (tags.containsKey("route")) {
+                    if (tags.containsKey("route") || tags.containsKey("path")) {
                         httpRoute = tags.get("route");
+                        httpPath = tags.get("path");
                         if (httpMethod == null) httpMethod = tags.get("method");
                         if (httpUrl == null) httpUrl = tags.get("url");
                         if (httpStatusCode == null && tags.containsKey("statusCode")) {
@@ -210,6 +213,7 @@ public class TraceService {
                 .httpMethod(httpMethod)
                 .httpUrl(httpUrl)
                 .httpRoute(httpRoute)
+                .httpPath(httpPath)
                 .build();
     }
 
@@ -281,14 +285,25 @@ public class TraceService {
         if (httpMethod == null) httpMethod = tags.get("http.request.method");
         String httpUrl = tags.get("http.url");
         if (httpUrl == null) httpUrl = tags.get("url.full");
-        String httpRoute = tags.get("url.path");
-        if (httpRoute == null) httpRoute = tags.get("http.target");
-        if (httpRoute == null) httpRoute = tags.get("http.route");
         Integer httpStatusCode = parseStatusCode(tags);
 
-        // When http.route is absent, enrich the operation name with http.method + http.url
-        String operationName = span.getOperationName();
+        // Resolve actual path: url.path → http.target → extracted from http.url → http.route
+        String httpRoute = tags.get("url.path");
+        if (httpRoute == null) httpRoute = tags.get("http.target");
         if (httpRoute == null && httpUrl != null) {
+            try {
+                httpRoute = java.net.URI.create(httpUrl).getPath();
+            } catch (Exception ignored) {}
+        }
+        if (httpRoute == null) httpRoute = tags.get("http.route");
+
+        // Enrich operation name with actual path
+        String operationName = span.getOperationName();
+        if (httpRoute != null) {
+            operationName = httpMethod != null
+                    ? httpMethod + " " + httpRoute
+                    : httpRoute;
+        } else if (httpUrl != null) {
             operationName = httpMethod != null
                     ? httpMethod + " " + httpUrl
                     : httpUrl;
@@ -331,7 +346,7 @@ public class TraceService {
 
     /**
      * Extract HTTP tags from a span into a normalized map with keys:
-     * "method", "url", "route", "statusCode".
+     * "method", "url", "route" (template), "path" (actual), "statusCode".
      * Returns empty map if the span has no HTTP tags.
      */
     private Map<String, String> extractHttpTags(JaegerSpan span) {
@@ -346,16 +361,30 @@ public class TraceService {
         if (method == null) method = tags.get("http.request.method");
         if (method != null) result.put("method", method);
 
-        // Path — prefer url.path (actual path) over http.route (template)
-        String route = tags.get("url.path");
-        if (route == null) route = tags.get("http.target");
-        if (route == null) route = tags.get("http.route");
+        // Route template (e.g. /api/v1/users/{id})
+        String route = tags.get("http.route");
         if (route != null) result.put("route", route);
 
-        // URL
+        // URL (full)
         String url = tags.get("http.url");
         if (url == null) url = tags.get("url.full");
         if (url != null) result.put("url", url);
+
+        // Actual path (e.g. /api/v1/users/123)
+        String path = tags.get("url.path");
+        if (path == null) path = tags.get("http.target");
+        if (path == null && url != null) {
+            // Extract path from full URL: http://host:port/path?query → /path
+            try {
+                java.net.URI uri = java.net.URI.create(url);
+                path = uri.getPath();
+            } catch (Exception ignored) {}
+        }
+        if (path == null) path = route; // last resort: use template
+        if (path != null) result.put("path", path);
+
+        // Also set "route" if it wasn't set from http.route — use path as fallback
+        if (route == null && path != null) result.put("route", path);
 
         // Status code
         String status = tags.get("http.response.status_code");

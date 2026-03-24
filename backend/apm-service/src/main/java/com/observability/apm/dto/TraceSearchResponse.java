@@ -64,7 +64,10 @@ public class TraceSearchResponse {
         /** HTTP URL from root span. */
         private String httpUrl;
 
-        /** HTTP route from root span (e.g. /api/users/{id}). */
+        /** HTTP route template from root span (e.g. /api/users/{id}). */
         private String httpRoute;
+
+        /** Actual URL path from root span (e.g. /api/users/123). */
+        private String httpPath;
     }
 }

@@ -15,10 +15,10 @@ export function formatTime(iso: string): string {
   } as Intl.DateTimeFormatOptions)
 }
 
-/** Build display label for root operation: METHOD route (or url if route is missing). */
+/** Build display label for root operation: METHOD path (prefers actual path over route template). */
 export function formatRootOperation(trace: TraceSummary): string {
   const method = trace.httpMethod ?? ''
-  const path = trace.httpRoute ?? trace.httpUrl ?? ''
+  const path = trace.httpPath ?? trace.httpRoute ?? trace.httpUrl ?? ''
 
   if (method && path) return `${method} ${path}`
   if (method) return method

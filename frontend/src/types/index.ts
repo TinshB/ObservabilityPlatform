@@ -398,6 +398,7 @@ export interface TraceSummary {
   httpMethod?:     string | null
   httpUrl?:        string | null
   httpRoute?:      string | null
+  httpPath?:       string | null
 }
 
 export interface TraceSearchResponse {
