@@ -1,5 +1,6 @@
 package com.observability.apm.service;
 
+import com.observability.apm.dto.AutoRegisterRequest;
 import com.observability.apm.dto.JaegerServiceInfo;
 import com.observability.apm.jaeger.JaegerClient;
 import com.observability.apm.jaeger.JaegerResponse;
@@ -29,6 +30,7 @@ public class JaegerServiceDiscoveryService {
 
     private final JaegerClient jaegerClient;
     private final ServiceRepository serviceRepository;
+    private final ServiceCatalogService serviceCatalogService;
 
     /**
      * Discover all services from Jaeger with their type, error rate, and throughput.
@@ -42,9 +44,26 @@ public class JaegerServiceDiscoveryService {
             return List.of();
         }
 
-        // 2. Get registered service names from DB for the "registered" flag
+        // 2. Auto-register missing services in the DB
         Set<String> registeredNames = new HashSet<>();
         serviceRepository.findAll().forEach(e -> registeredNames.add(e.getName()));
+
+        int newCount = 0;
+        for (String serviceName : serviceNames) {
+            if (!registeredNames.contains(serviceName)) {
+                try {
+                    serviceCatalogService.autoRegister(
+                            AutoRegisterRequest.builder().serviceName(serviceName).build());
+                    registeredNames.add(serviceName);
+                    newCount++;
+                } catch (Exception ex) {
+                    log.warn("Failed to auto-register service '{}': {}", serviceName, ex.getMessage());
+                }
+            }
+        }
+        if (newCount > 0) {
+            log.info("Auto-registered {} new service(s) from Jaeger", newCount);
+        }
 
         Instant end = Instant.now();
         Instant start = end.minusSeconds(lookbackSeconds);
