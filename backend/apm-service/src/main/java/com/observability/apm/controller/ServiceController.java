@@ -135,7 +135,7 @@ public class ServiceController {
 
     // ── Get by ID (must be LAST — /{id} is a catch-all path variable) ────────
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:[0-9a-fA-F\\-]{36}}")
     @Operation(summary = "Get service",
             description = "Retrieve a single service by ID")
     public ResponseEntity<ApiResponse<ServiceResponse>> getService(@PathVariable UUID id) {
