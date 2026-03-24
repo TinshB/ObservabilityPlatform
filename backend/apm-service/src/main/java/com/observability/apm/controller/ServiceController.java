@@ -114,14 +114,6 @@ public class ServiceController {
         return ResponseEntity.ok(ApiResponse.success(PagedResponse.from(page)));
     }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Get service",
-            description = "Retrieve a single service by ID")
-    public ResponseEntity<ApiResponse<ServiceResponse>> getService(@PathVariable UUID id) {
-        ServiceResponse service = serviceCatalogService.getServiceById(id);
-        return ResponseEntity.ok(ApiResponse.success(service));
-    }
-
     @GetMapping("/filters")
     @Operation(summary = "Get filter options",
             description = "Returns distinct environments, teams, and tiers for use in UI dropdowns")
@@ -139,5 +131,15 @@ public class ServiceController {
             @RequestParam(defaultValue = "900") long lookbackSeconds) {
         List<JaegerServiceInfo> services = jaegerDiscoveryService.discoverServices(lookbackSeconds);
         return ResponseEntity.ok(ApiResponse.success(services));
+    }
+
+    // ── Get by ID (must be LAST — /{id} is a catch-all path variable) ────────
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Get service",
+            description = "Retrieve a single service by ID")
+    public ResponseEntity<ApiResponse<ServiceResponse>> getService(@PathVariable UUID id) {
+        ServiceResponse service = serviceCatalogService.getServiceById(id);
+        return ResponseEntity.ok(ApiResponse.success(service));
     }
 }
