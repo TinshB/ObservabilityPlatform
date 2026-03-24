@@ -466,9 +466,9 @@ function TracesTab({ data, serviceId, onTraceClick }: {
       )}
       <Button
         variant="contained"
-        onClick={() => navigate(`/traces?service=${serviceId}`)}
+        onClick={() => navigate(`/transactions?service=${serviceId}`)}
       >
-        Open in Trace Viewer
+        Open in Transaction Viewer
       </Button>
     </Box>
   )

@@ -209,7 +209,7 @@ export default function TransactionTracesPage() {
     if (serviceId) params.set('service', serviceId)
     if (range) params.set('range', range)
     const qs = params.toString()
-    navigate(`/traces/${encodeURIComponent(traceId)}${qs ? `?${qs}` : ''}`)
+    navigate(`/transactions/${encodeURIComponent(operation ?? '')}/traces/${encodeURIComponent(traceId)}${qs ? `?${qs}` : ''}`)
   }
 
   const handleBack = () => {
@@ -217,7 +217,7 @@ export default function TransactionTracesPage() {
     if (serviceId) params.set('service', serviceId)
     if (range) params.set('range', range)
     const qs = params.toString()
-    navigate(`/traces${qs ? `?${qs}` : ''}`)
+    navigate(`/transactions${qs ? `?${qs}` : ''}`)
   }
 
   const handleLoadMore = () => setLimit((prev) => prev + 20)

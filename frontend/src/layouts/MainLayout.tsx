@@ -72,7 +72,7 @@ const NAV_ITEMS = [
   { label: 'APM Overview', icon: <SpeedIcon />,          path: '/apm' },
   { label: 'Services',     icon: <MonitorHeartIcon />,  path: '/services' },
   { label: 'Metrics',      icon: <BarChartIcon />,      path: '/metrics' },
-  { label: 'Traces',       icon: <AccountTreeIcon />,   path: '/traces' },
+  { label: 'Transactions', icon: <AccountTreeIcon />,   path: '/transactions' },
   { label: 'Logs',         icon: <ArticleIcon />,       path: '/logs' },
   { label: 'Dependencies',   icon: <HubIcon />,             path: '/dependencies' },
   { label: 'Alerts',         icon: <NotificationsIcon />, path: '/alerts' },

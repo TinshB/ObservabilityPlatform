@@ -93,8 +93,9 @@ export default function AppRoutes() {
             <Route path="/services/:serviceId" element={<ErrorBoundary><ServiceDeepDivePage /></ErrorBoundary>} />
             <Route path="/metrics" element={<ErrorBoundary><MetricsExplorerPage /></ErrorBoundary>} />
             <Route path="/logs" element={<ErrorBoundary><LogExplorerPage /></ErrorBoundary>} />
-            <Route path="/traces" element={<ErrorBoundary><TraceViewerPage /></ErrorBoundary>} />
-            <Route path="/traces/transactions/:operation" element={<ErrorBoundary><TransactionTracesPage /></ErrorBoundary>} />
+            <Route path="/transactions" element={<ErrorBoundary><TraceViewerPage /></ErrorBoundary>} />
+            <Route path="/transactions/:operation" element={<ErrorBoundary><TransactionTracesPage /></ErrorBoundary>} />
+            <Route path="/transactions/:operation/traces/:traceId" element={<ErrorBoundary><TraceDetailPage /></ErrorBoundary>} />
             <Route path="/traces/:traceId" element={<ErrorBoundary><TraceDetailPage /></ErrorBoundary>} />
             <Route path="/admin/users" element={<ErrorBoundary><UsersPage /></ErrorBoundary>} />
             <Route path="/admin/roles" element={<ErrorBoundary><RolesPage /></ErrorBoundary>} />

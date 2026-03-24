@@ -215,9 +215,15 @@ function SpanRow({
     ? Math.max((span.durationMicros / traceDurationMicros) * 100, 0.5)
     : 100
 
+  // Resolve HTTP status: prefer the typed field, fall back to tags
+  const effectiveStatusCode: number | null =
+    span.httpStatusCode ??
+    (span.tags['http.response.status_code'] ? Number(span.tags['http.response.status_code']) : null) ??
+    (span.tags['http.status_code'] ? Number(span.tags['http.status_code']) : null)
+
   const hasTags = Object.keys(span.tags).length > 0
   const hasLogs = span.logs.length > 0
-  const hasHttp = span.httpMethod || span.httpUrl || span.httpStatusCode
+  const hasHttp = span.httpMethod || span.httpUrl || effectiveStatusCode
   // Always allow expand — ES logs are fetched lazily on expand
   const hasDetails = true
 
@@ -374,11 +380,11 @@ function SpanRow({
                 {span.httpMethod && (
                   <Chip label={span.httpMethod} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: '0.7rem' }} />
                 )}
-                {span.httpStatusCode && (
+                {effectiveStatusCode != null && (
                   <Chip
-                    label={span.httpStatusCode}
+                    label={effectiveStatusCode}
                     size="small"
-                    color={span.httpStatusCode >= 400 ? 'error' : 'success'}
+                    color={effectiveStatusCode >= 400 ? 'error' : 'success'}
                     sx={{ fontWeight: 600, fontSize: '0.7rem' }}
                   />
                 )}

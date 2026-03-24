@@ -207,7 +207,7 @@ export default function TraceViewerPage() {
       params.set('range', selectedRange)
     }
     const qs = params.toString()
-    navigate(`/traces/transactions/${encodeURIComponent(txn.transaction)}${qs ? `?${qs}` : ''}`)
+    navigate(`/transactions/${encodeURIComponent(txn.transaction)}${qs ? `?${qs}` : ''}`)
   }
 
   // ── Sorting ───────────────────────────────────────────────────────────
