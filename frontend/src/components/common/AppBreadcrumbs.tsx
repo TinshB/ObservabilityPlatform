@@ -36,16 +36,21 @@ interface BreadcrumbContextType {
   labels: Map<string, string>
   setLabel: (key: string, label: string) => void
   removeLabel: (key: string) => void
+  customCrumbs: { label: string; path: string }[] | null
+  setCustomCrumbs: (crumbs: { label: string; path: string }[] | null) => void
 }
 
 export const BreadcrumbContext = createContext<BreadcrumbContextType>({
   labels: new Map(),
   setLabel: () => {},
   removeLabel: () => {},
+  customCrumbs: null,
+  setCustomCrumbs: () => {},
 })
 
 export function BreadcrumbProvider({ children }: { children: React.ReactNode }) {
   const [labels, setLabels] = useState<Map<string, string>>(new Map())
+  const [customCrumbs, setCustomCrumbs] = useState<{ label: string; path: string }[] | null>(null)
 
   const setLabel = useCallback((key: string, label: string) => {
     setLabels(prev => {
@@ -66,8 +71,8 @@ export function BreadcrumbProvider({ children }: { children: React.ReactNode }) 
   }, [])
 
   const value = useMemo(
-    () => ({ labels, setLabel, removeLabel }),
-    [labels, setLabel, removeLabel],
+    () => ({ labels, setLabel, removeLabel, customCrumbs, setCustomCrumbs }),
+    [labels, setLabel, removeLabel, customCrumbs],
   )
 
   return (
@@ -80,8 +85,20 @@ export function BreadcrumbProvider({ children }: { children: React.ReactNode }) 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatSegment(segment: string): string {
-  if (segment.length > 20) return `${segment.substring(0, 12)}…`
-  return segment
+  // Decode URL-encoded segments (e.g. "POST%20%2Fapi%2Fusers" → "POST /api/users")
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(segment)
+  } catch {
+    decoded = segment
+  }
+
+  // If the decoded value looks like an operation/path (contains / or space),
+  // return as-is instead of title-casing
+  if (decoded.includes('/') || decoded.includes(' ')) return decoded
+
+  if (decoded.length > 30) return `${decoded.substring(0, 24)}…`
+  return decoded
     .split('-')
     .map(w => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ')
@@ -92,14 +109,18 @@ function formatSegment(segment: string): string {
 export default function AppBreadcrumbs() {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
-  const { labels } = useContext(BreadcrumbContext)
+  const { labels, customCrumbs } = useContext(BreadcrumbContext)
 
   /**
-   * Navigate to a breadcrumb target. When the target is a parent of the
-   * current path, preserve search params so filters (serviceId, range, etc.)
-   * survive back-navigation (e.g. Trace Detail → Traces list).
+   * Navigate to a breadcrumb target. For custom crumbs the path already
+   * contains the correct query string; for auto-generated crumbs we
+   * preserve current search params when navigating to a parent path.
    */
   const handleNavigate = (targetPath: string) => {
+    if (customCrumbs) {
+      navigate(targetPath)
+      return
+    }
     const isParent = pathname.startsWith(targetPath) && pathname !== targetPath
     navigate(isParent ? targetPath + search : targetPath)
   }
@@ -107,22 +128,32 @@ export default function AppBreadcrumbs() {
   const segments = pathname.split('/').filter(Boolean)
 
   // Hide on home page — nothing to navigate back to
-  if (segments.length === 0 || (segments.length === 1 && segments[0] === 'home')) {
+  if (!customCrumbs && (segments.length === 0 || (segments.length === 1 && segments[0] === 'home'))) {
     return null
   }
 
-  const crumbs: { label: string; path: string }[] = [
-    { label: 'Home', path: '/home' },
-  ]
+  let crumbs: { label: string; path: string }[]
 
-  let cumulativePath = ''
-  for (const segment of segments) {
-    cumulativePath += `/${segment}`
-    const label =
-      SEGMENT_LABELS[segment] ??
-      labels.get(segment) ??
-      formatSegment(segment)
-    crumbs.push({ label, path: cumulativePath })
+  if (customCrumbs) {
+    crumbs = customCrumbs
+  } else {
+    crumbs = [{ label: 'Home', path: '/home' }]
+
+    let cumulativePath = ''
+    for (const segment of segments) {
+      cumulativePath += `/${segment}`
+
+      let decoded: string
+      try { decoded = decodeURIComponent(segment) } catch { decoded = segment }
+
+      const label =
+        SEGMENT_LABELS[segment] ??
+        SEGMENT_LABELS[decoded] ??
+        labels.get(segment) ??
+        labels.get(decoded) ??
+        formatSegment(segment)
+      crumbs.push({ label, path: cumulativePath })
+    }
   }
 
   return (

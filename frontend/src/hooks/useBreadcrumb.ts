@@ -1,4 +1,4 @@
-import { useContext, useEffect } from 'react'
+import { useContext, useEffect, useRef } from 'react'
 import { BreadcrumbContext } from '@/components/common/AppBreadcrumbs'
 
 /**
@@ -21,4 +21,23 @@ export function useBreadcrumb(key: string | undefined, label: string | undefined
       if (key) removeLabel(key)
     }
   }, [key, label, setLabel, removeLabel])
+}
+
+/**
+ * Overrides the auto-generated breadcrumb trail with a custom set of crumbs.
+ * Clears the override on unmount so other pages fall back to auto-generation.
+ */
+export function useCustomBreadcrumbs(crumbs: { label: string; path: string }[]) {
+  const { setCustomCrumbs } = useContext(BreadcrumbContext)
+  const serialized = JSON.stringify(crumbs)
+  const prevRef = useRef(serialized)
+
+  useEffect(() => {
+    if (prevRef.current !== serialized) {
+      prevRef.current = serialized
+    }
+    setCustomCrumbs(crumbs)
+    return () => setCustomCrumbs(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serialized, setCustomCrumbs])
 }

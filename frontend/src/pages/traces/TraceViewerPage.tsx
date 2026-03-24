@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useCustomBreadcrumbs } from '@/hooks/useBreadcrumb'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -81,6 +82,20 @@ export default function TraceViewerPage() {
   const [snackbar, setSnackbar] = useState<{
     open: boolean; message: string; severity: 'success' | 'error' | 'info'
   }>({ open: false, message: '', severity: 'info' })
+
+  // ── Breadcrumb: Home → Transactions → <serviceName> ──────────────────
+  useCustomBreadcrumbs(
+    useMemo(() => {
+      const c = [
+        { label: 'Home', path: '/home' },
+        { label: 'Transactions', path: '/transactions' },
+      ]
+      if (selectedService) {
+        c.push({ label: selectedService.name, path: `/transactions?service=${selectedService.id}` })
+      }
+      return c
+    }, [selectedService]),
+  )
 
   // ── Load services + presets on mount ──────────────────────────────────
   useEffect(() => {
@@ -199,7 +214,10 @@ export default function TraceViewerPage() {
 
   const handleTransactionClick = (txn: TransactionSummary) => {
     const params = new URLSearchParams()
-    if (selectedService) params.set('service', selectedService.id)
+    if (selectedService) {
+      params.set('service', selectedService.id)
+      params.set('serviceName', selectedService.name)
+    }
     if (customRange) {
       params.set('start', customRange.start.toISOString())
       params.set('end', customRange.end.toISOString())
@@ -245,7 +263,7 @@ export default function TraceViewerPage() {
     <Box>
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <Typography variant="h5" fontWeight={700} sx={{ mb: 3 }}>
-        Trace Viewer
+        Transaction Viewer
       </Typography>
 
       {/* ── Filter bar ───────────────────────────────────────────────────── */}

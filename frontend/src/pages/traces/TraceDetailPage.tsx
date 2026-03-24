@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Box,
   Typography,
@@ -29,7 +29,7 @@ import * as traceService from '@/services/traceService'
 import { getLogsByTraceId } from '@/services/logService'
 import SpanBreakupPanel from './SpanBreakupPanel'
 import AiSuggestionsPanel from './AiSuggestionsPanel'
-import { useBreadcrumb } from '@/hooks/useBreadcrumb'
+import { useCustomBreadcrumbs } from '@/hooks/useBreadcrumb'
 import { formatDuration } from '@/utils/traceUtils'
 
 // ── Service colour palette ──────────────────────────────────────────────────
@@ -504,8 +504,13 @@ function WaterfallSkeleton() {
 // ── Main page component ─────────────────────────────────────────────────────
 
 export default function TraceDetailPage() {
-  const { traceId } = useParams<{ traceId: string }>()
+  const { operation, traceId } = useParams<{ operation?: string; traceId: string }>()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+
+  const serviceId   = searchParams.get('service') ?? ''
+  const serviceName = searchParams.get('serviceName') ?? ''
+  const decodedOperation = operation ? decodeURIComponent(operation) : ''
 
   const [trace, setTrace] = useState<TraceDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -514,8 +519,30 @@ export default function TraceDetailPage() {
     open: boolean; message: string; severity: 'success' | 'error' | 'info'
   }>({ open: false, message: '', severity: 'info' })
 
-  // Dynamic breadcrumb — show truncated trace ID
-  useBreadcrumb(traceId, traceId ? `${traceId.substring(0, 16)}…` : undefined)
+  // ── Breadcrumb: Home → Transactions → <serviceName> → <operation> → <traceId>
+  useCustomBreadcrumbs(
+    useMemo(() => {
+      const c = [
+        { label: 'Home', path: '/home' },
+        { label: 'Transactions', path: '/transactions' },
+      ]
+      if (serviceName) {
+        c.push({ label: serviceName, path: `/transactions?service=${serviceId}` })
+      }
+      if (decodedOperation) {
+        const opParams = new URLSearchParams()
+        if (serviceId) opParams.set('service', serviceId)
+        if (serviceName) opParams.set('serviceName', serviceName)
+        const opQs = opParams.toString()
+        c.push({
+          label: decodedOperation,
+          path: `/transactions/${encodeURIComponent(decodedOperation)}${opQs ? `?${opQs}` : ''}`,
+        })
+      }
+      c.push({ label: traceId ? `${traceId.substring(0, 16)}…` : '', path: '' })
+      return c
+    }, [serviceName, serviceId, decodedOperation, traceId]),
+  )
 
   // Fetch trace detail
   useEffect(() => {

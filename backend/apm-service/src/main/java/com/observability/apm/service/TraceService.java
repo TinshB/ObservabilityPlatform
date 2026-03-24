@@ -137,6 +137,26 @@ public class TraceService {
                 .sorted()
                 .toList();
 
+        // Extract HTTP fields from root span tags
+        Integer httpStatusCode = null;
+        String httpMethod = null;
+        String httpUrl = null;
+        String httpRoute = null;
+
+        if (rootSpan != null && rootSpan.getTags() != null) {
+            Map<String, String> rootTags = new LinkedHashMap<>();
+            rootSpan.getTags().forEach(t -> rootTags.put(t.getKey(), String.valueOf(t.getValue())));
+
+            httpMethod = rootTags.get("http.method");
+            if (httpMethod == null) httpMethod = rootTags.get("http.request.method");
+            httpUrl = rootTags.get("http.url");
+            if (httpUrl == null) httpUrl = rootTags.get("url.full");
+            httpRoute = rootTags.get("http.route");
+            if (httpRoute == null) httpRoute = rootTags.get("url.path");
+
+            httpStatusCode = parseStatusCode(rootTags);
+        }
+
         return TraceSearchResponse.TraceSummary.builder()
                 .traceId(trace.getTraceId())
                 .rootService(rootService)
@@ -147,6 +167,10 @@ public class TraceService {
                 .spanCount(spans.size())
                 .errorCount(errorCount)
                 .services(services)
+                .httpStatusCode(httpStatusCode)
+                .httpMethod(httpMethod)
+                .httpUrl(httpUrl)
+                .httpRoute(httpRoute)
                 .build();
     }
 
@@ -213,16 +237,14 @@ public class TraceService {
             span.getTags().forEach(t -> tags.put(t.getKey(), String.valueOf(t.getValue())));
         }
 
-        // Extract common HTTP tags
-        Integer httpStatusCode = null;
+        // Extract common HTTP tags (OTel + legacy conventions)
         String httpMethod = tags.get("http.method");
+        if (httpMethod == null) httpMethod = tags.get("http.request.method");
         String httpUrl = tags.get("http.url");
+        if (httpUrl == null) httpUrl = tags.get("url.full");
         String httpRoute = tags.get("http.route");
-        if (tags.containsKey("http.status_code")) {
-            try {
-                httpStatusCode = Integer.parseInt(tags.get("http.status_code"));
-            } catch (NumberFormatException ignored) {}
-        }
+        if (httpRoute == null) httpRoute = tags.get("url.path");
+        Integer httpStatusCode = parseStatusCode(tags);
 
         // When http.route is absent, enrich the operation name with http.method + http.url
         String operationName = span.getOperationName();
@@ -276,6 +298,20 @@ public class TraceService {
                 .orElseGet(() -> spans.stream()
                         .min(Comparator.comparingLong(JaegerSpan::getStartTime))
                         .orElse(null));
+    }
+
+    /**
+     * Parse HTTP status code from tags — checks OTel and legacy tag names.
+     */
+    private Integer parseStatusCode(Map<String, String> tags) {
+        String raw = tags.get("http.response.status_code");
+        if (raw == null) raw = tags.get("http.status_code");
+        if (raw == null) return null;
+        try {
+            return Integer.parseInt(raw);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private boolean isErrorSpan(JaegerSpan span) {

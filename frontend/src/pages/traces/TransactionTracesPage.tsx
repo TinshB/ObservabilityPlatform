@@ -31,7 +31,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ViewColumnIcon from '@mui/icons-material/ViewColumn'
 import type { TraceSummary, TraceSearchParams } from '@/types'
 import * as traceService from '@/services/traceService'
-import { useBreadcrumb } from '@/hooks/useBreadcrumb'
+import { useCustomBreadcrumbs } from '@/hooks/useBreadcrumb'
 import { formatDuration, formatTime, formatRootOperation } from '@/utils/traceUtils'
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -138,12 +138,27 @@ export default function TransactionTracesPage() {
   const navigate = useNavigate()
 
   const decodedOperation = decodeURIComponent(operation ?? '')
-  useBreadcrumb(operation ?? '', decodedOperation)
 
-  const serviceId = searchParams.get('service') ?? ''
-  const range     = searchParams.get('range') ?? ''
-  const start     = searchParams.get('start') ?? ''
-  const end       = searchParams.get('end') ?? ''
+  const serviceId   = searchParams.get('service') ?? ''
+  const serviceName = searchParams.get('serviceName') ?? ''
+  const range       = searchParams.get('range') ?? ''
+  const start       = searchParams.get('start') ?? ''
+  const end         = searchParams.get('end') ?? ''
+
+  // ── Breadcrumb: Home → Transactions → <serviceName> → <operation> ──
+  useCustomBreadcrumbs(
+    useMemo(() => {
+      const c = [
+        { label: 'Home', path: '/home' },
+        { label: 'Transactions', path: '/transactions' },
+      ]
+      if (serviceName) {
+        c.push({ label: serviceName, path: `/transactions?service=${serviceId}` })
+      }
+      c.push({ label: decodedOperation, path: '' })
+      return c
+    }, [serviceName, serviceId, decodedOperation]),
+  )
 
   // ── Trace data ──────────────────────────────────────────────────────────
   const [traces, setTraces]     = useState<TraceSummary[]>([])
@@ -207,6 +222,7 @@ export default function TransactionTracesPage() {
   const handleTraceClick = (traceId: string) => {
     const params = new URLSearchParams()
     if (serviceId) params.set('service', serviceId)
+    if (serviceName) params.set('serviceName', serviceName)
     if (range) params.set('range', range)
     const qs = params.toString()
     navigate(`/transactions/${encodeURIComponent(operation ?? '')}/traces/${encodeURIComponent(traceId)}${qs ? `?${qs}` : ''}`)
@@ -215,6 +231,7 @@ export default function TransactionTracesPage() {
   const handleBack = () => {
     const params = new URLSearchParams()
     if (serviceId) params.set('service', serviceId)
+    if (serviceName) params.set('serviceName', serviceName)
     if (range) params.set('range', range)
     const qs = params.toString()
     navigate(`/transactions${qs ? `?${qs}` : ''}`)

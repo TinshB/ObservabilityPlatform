@@ -54,5 +54,17 @@ public class TraceSearchResponse {
 
         /** Distinct service names participating in the trace. */
         private List<String> services;
+
+        /** HTTP status code from root span (e.g. 200, 404, 500). */
+        private Integer httpStatusCode;
+
+        /** HTTP method from root span (e.g. GET, POST). */
+        private String httpMethod;
+
+        /** HTTP URL from root span. */
+        private String httpUrl;
+
+        /** HTTP route from root span (e.g. /api/users/{id}). */
+        private String httpRoute;
     }
 }
