@@ -61,7 +61,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   logmetrics: 'Log Metrics',
 }
 
-const DEFAULT_RANGE = 'LAST_1H'
+const DEFAULT_RANGE = 'LAST_15M'
 
 interface SnackbarState {
   open: boolean

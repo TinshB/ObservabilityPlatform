@@ -47,7 +47,7 @@ import { getDependencyGraph } from '@/services/dependencyService'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const DEFAULT_RANGE = 'LAST_1H'
+const DEFAULT_RANGE = 'LAST_15M'
 const TAB_KEYS = ['overview', 'metrics', 'logs', 'traces', 'dependencies'] as const
 type TabKey = typeof TAB_KEYS[number]
 

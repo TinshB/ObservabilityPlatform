@@ -62,6 +62,9 @@ const SyntheticMonitoringPage = lazy(() => import('@/pages/synthetic/SyntheticMo
 // Billing (US-BILL-001)
 const BillingPage = lazy(() => import('@/pages/billing/BillingPage'))
 
+// AI Insights (Coming Soon)
+const AiInsightsPage = lazy(() => import('@/pages/ai-insights/AiInsightsPage'))
+
 // Future routes (added as sprints deliver them):
 //  Sprint 15-16: /ai
 
@@ -112,6 +115,7 @@ export default function AppRoutes() {
             <Route path="/reports" element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />
             <Route path="/synthetic" element={<ErrorBoundary><SyntheticMonitoringPage /></ErrorBoundary>} />
             <Route path="/admin/billings" element={<ErrorBoundary><BillingPage /></ErrorBoundary>} />
+            <Route path="/ai-insights" element={<ErrorBoundary><AiInsightsPage /></ErrorBoundary>} />
             <Route path="/profile" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
           </Route>
         </Route>

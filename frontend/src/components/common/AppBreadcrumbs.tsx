@@ -23,6 +23,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   dashboard:    'Dashboard',
   reports:      'Reports',
   synthetic:    'Synthetic Monitoring',
+  'ai-insights': 'AI Insights',
   billings:     'Billings',
   admin:        'Administration',
   users:        'Users',

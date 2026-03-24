@@ -19,6 +19,7 @@ import {
 } from '@mui/material'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import CodeIcon from '@mui/icons-material/Code'
 import {
   ResponsiveContainer,
   LineChart,
@@ -116,6 +117,7 @@ export default function QueryMetricsTab({ serviceId, serviceName, params }: Prop
   const [error, setError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>('p95ExecTime')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [showQueries, setShowQueries] = useState(false)
 
   const fetchMetrics = useCallback(async () => {
     setLoading(true)
@@ -338,6 +340,47 @@ export default function QueryMetricsTab({ serviceId, serviceName, params }: Prop
               ))}
             </LineChart>
           </ResponsiveContainer>
+        </Paper>
+      )}
+
+      {/* ── Executed PromQL Queries ──────────────────────────────────────── */}
+      {data.executedQueries && data.executedQueries.length > 0 && (
+        <Paper variant="outlined">
+          <Box
+            sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1, cursor: 'pointer' }}
+            onClick={() => setShowQueries(!showQueries)}
+          >
+            <CodeIcon fontSize="small" color="action" />
+            <Typography variant="subtitle2" fontWeight={600} color="text.secondary">
+              Executed Queries ({data.executedQueries.filter(q => !q.startsWith('[resolve]')).length})
+            </Typography>
+            <IconButton size="small" sx={{ ml: 'auto' }}>
+              {showQueries ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+            </IconButton>
+          </Box>
+          <Collapse in={showQueries}>
+            <Box sx={{ px: 2, pb: 2 }}>
+              {data.executedQueries
+                .filter(q => !q.startsWith('[resolve]'))
+                .map((q, i) => (
+                  <Typography
+                    key={i}
+                    variant="body2"
+                    sx={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '0.75rem',
+                      p: 1,
+                      mb: 0.5,
+                      backgroundColor: 'action.hover',
+                      borderRadius: 1,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {q}
+                  </Typography>
+                ))}
+            </Box>
+          </Collapse>
         </Paper>
       )}
     </Box>

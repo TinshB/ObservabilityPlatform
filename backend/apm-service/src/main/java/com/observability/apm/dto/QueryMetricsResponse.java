@@ -38,6 +38,9 @@ public class QueryMetricsResponse {
     /** Current instant values. */
     private InstantQueryMetrics current;
 
+    /** PromQL queries executed for transparency / debugging. */
+    private List<String> executedQueries;
+
     @Data
     @Builder
     @NoArgsConstructor

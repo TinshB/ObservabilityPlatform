@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   Box,
+  Chip,
   Drawer,
   AppBar,
   Toolbar,
@@ -40,6 +41,7 @@ import CampaignIcon        from '@mui/icons-material/Campaign'
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined'
 import AssessmentIcon     from '@mui/icons-material/Assessment'
 import NetworkCheckIcon   from '@mui/icons-material/NetworkCheck'
+import AutoAwesomeIcon    from '@mui/icons-material/AutoAwesome'
 import PaymentIcon        from '@mui/icons-material/Payment'
 import PeopleIcon          from '@mui/icons-material/People'
 import SecurityIcon        from '@mui/icons-material/Security'
@@ -81,7 +83,8 @@ const NAV_ITEMS = [
   { label: 'Workflows',     icon: <AccountTreeOutlinedIcon />, path: '/workflows' },
   { label: 'Reports',       icon: <AssessmentIcon />,          path: '/reports' },
   { label: 'Synthetic Monitoring', icon: <NetworkCheckIcon />, path: '/synthetic' },
-] as const
+  { label: 'AI Insights', icon: <AutoAwesomeIcon />, path: '/ai-insights', comingSoon: true },
+] as const satisfies readonly { label: string; icon: React.ReactNode; path: string; comingSoon?: boolean }[]
 
 const ADMIN_ITEMS = [
   { label: 'Users',    icon: <PeopleIcon />,   path: '/admin/users' },
@@ -156,7 +159,7 @@ export default function MainLayout() {
 
   const modeIcon = effectiveMode === 'dark' ? <DarkModeIcon /> : <LightModeIcon />
 
-  const navItemButton = (label: string, icon: React.ReactNode, path: string) => (
+  const navItemButton = (label: string, icon: React.ReactNode, path: string, comingSoon?: boolean) => (
     <ListItem key={path} disablePadding>
       <ListItemButton
         selected={location.pathname === path || (path !== '/home' && location.pathname.startsWith(path + '/'))}
@@ -175,6 +178,10 @@ export default function MainLayout() {
       >
         <ListItemIcon sx={{ minWidth: 36 }}>{icon}</ListItemIcon>
         <ListItemText primary={label} primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }} />
+        {comingSoon && (
+          <Chip label="Soon" size="small" color="primary" variant="outlined"
+            sx={{ height: 20, fontSize: '0.6rem', fontWeight: 700, ml: 0.5 }} />
+        )}
       </ListItemButton>
     </ListItem>
   )
@@ -249,7 +256,7 @@ export default function MainLayout() {
       </Box>
 
       <List dense>
-        {NAV_ITEMS.map(({ label, icon, path }) => navItemButton(label, icon, path))}
+        {NAV_ITEMS.map((item) => navItemButton(item.label, item.icon, item.path, 'comingSoon' in item ? item.comingSoon : undefined))}
       </List>
 
       {isAdmin && (

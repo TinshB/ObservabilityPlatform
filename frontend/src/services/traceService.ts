@@ -59,9 +59,14 @@ export async function getServiceTransactions(
     rangeSeconds = rangeMap[params.range] ?? 3600
   }
 
+  // Filter to only traces where rootService matches the selected service
+  const filtered = params.serviceName
+    ? result.traces.filter(t => t.rootService === params.serviceName)
+    : result.traces
+
   // Group traces by operation key
   const groups = new Map<string, { service: string; traces: typeof result.traces }>()
-  for (const trace of result.traces) {
+  for (const trace of filtered) {
     const key = formatRootOperation(trace)
     if (!groups.has(key)) {
       groups.set(key, { service: trace.rootService, traces: [] })

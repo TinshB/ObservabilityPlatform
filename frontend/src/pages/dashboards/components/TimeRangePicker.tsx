@@ -58,11 +58,11 @@ function toLocalInput(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-/** Build a default time range (last 1 hour). */
+/** Build a default time range (last 15 minutes). */
 export function defaultTimeRange(): TimeRange {
   const end = new Date()
-  const start = new Date(end.getTime() - 3600 * 1000)
-  return { start, end, label: 'Last 1h' }
+  const start = new Date(end.getTime() - 900 * 1000)
+  return { start, end, label: 'Last 15m' }
 }
 
 interface Props {

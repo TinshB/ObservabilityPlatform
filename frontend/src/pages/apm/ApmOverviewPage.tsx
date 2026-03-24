@@ -36,7 +36,7 @@ import * as metricsService from '@/services/metricsService'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const DEFAULT_RANGE = 'LAST_1H'
+const DEFAULT_RANGE = 'LAST_15M'
 
 const HEALTH_COLORS: Record<string, string> = {
   healthy:   '#2e7d32',

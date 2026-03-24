@@ -58,7 +58,7 @@ const SEVERITY_COLORS: Record<LogSeverity, string> = {
   TRACE: '#bdbdbd',
 }
 
-const DEFAULT_RANGE = 'LAST_1H'
+const DEFAULT_RANGE = 'LAST_15M'
 const DEFAULT_PAGE_SIZE = 50
 
 // ── Severity chip ───────────────────────────────────────────────────────────

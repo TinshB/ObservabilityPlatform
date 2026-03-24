@@ -334,9 +334,15 @@ public class ElasticsearchLogClient {
 
         // Extract line number — try common locations
         Integer lineNumber = null;
+        // 1. OTel semantic convention attributes
         String lineStr = attributes.get("code.lineno");
         if (lineStr == null) lineStr = attributes.get("code.line_number");
         if (lineStr == null) lineStr = attributes.get("code.lineNumber");
+        // 2. Logstash-logback-encoder / ECS attribute key
+        if (lineStr == null) lineStr = attributes.get("caller_line_number");
+        // 3. Top-level fields (logstash-logback-encoder default output)
+        if (lineStr == null) lineStr = textOrNull(source, "caller_line_number");
+        if (lineStr == null) lineStr = textOrNull(source, "line_number");
         if (lineStr != null) {
             try { lineNumber = Integer.parseInt(lineStr); } catch (NumberFormatException ignored) {}
         }

@@ -190,12 +190,42 @@ export default function WorkflowBuilderPage() {
     if (validEntries.length === 0) return
 
     try {
+      // Collect step IDs to delete before recreating
+      const idsToDelete: string[] = []
+
       if (editingStepOrder !== null) {
-        // Delete old steps for this stepOrder, then re-create
-        for (const id of editingStepIds) {
-          await workflowService.deleteStep(workflowId, id)
+        // Editing — delete old entries for this step group
+        idsToDelete.push(...editingStepIds)
+      } else {
+        // Adding — if a step group with this order already exists, merge with it
+        const existingGroup = groupedSteps.get(stepOrder) ?? []
+        if (existingGroup.length > 0) {
+          idsToDelete.push(...existingGroup.map(s => s.id))
+          // Preserve existing APIs that aren't duplicated by the new entries
+          for (const existing of existingGroup) {
+            const isDuplicate = validEntries.some(
+              e => e.serviceName === existing.serviceName
+                && e.httpMethod === existing.httpMethod
+                && e.pathPattern === existing.pathPattern,
+            )
+            if (!isDuplicate) {
+              validEntries.push({
+                serviceName: existing.serviceName,
+                httpMethod: existing.httpMethod,
+                pathPattern: existing.pathPattern,
+              })
+            }
+          }
         }
       }
+
+      for (const id of idsToDelete) {
+        await workflowService.deleteStep(workflowId, id)
+      }
+
+      // Resolve label: use explicit label, fall back to existing group label
+      const effectiveLabel = stepLabel || (groupedSteps.get(stepOrder)?.[0]?.label ?? '')
+
       // Create one WorkflowStep per API entry, all sharing the same stepOrder + label
       for (const entry of validEntries) {
         await workflowService.createStep(workflowId, {
@@ -203,7 +233,7 @@ export default function WorkflowBuilderPage() {
           serviceName: entry.serviceName,
           httpMethod: entry.httpMethod,
           pathPattern: entry.pathPattern,
-          label: stepLabel,
+          label: effectiveLabel,
         })
       }
       setSnackbar({ open: true, message: editingStepOrder !== null ? 'Step updated' : 'Step added', severity: 'success' })

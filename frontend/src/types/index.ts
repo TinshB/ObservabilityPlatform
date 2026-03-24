@@ -286,6 +286,7 @@ export interface QueryMetricsResponse {
   queryRate:          TimeSeries | null
   latencyByOperation: TimeSeries[]
   current:            InstantQueryMetrics | null
+  executedQueries?:   string[]
 }
 
 // ── Story 6.3: Log Metrics ──────────────────────────────────────────────────
@@ -462,9 +463,10 @@ export interface TransactionListResponse {
 }
 
 export interface TransactionSearchParams {
-  range?: string
-  start?: string   // ISO-8601
-  end?:   string   // ISO-8601
+  range?:       string
+  start?:       string   // ISO-8601
+  end?:         string   // ISO-8601
+  serviceName?: string   // filter transactions to this root service only
 }
 
 // ── Story 8.1: Span Breakup ──────────────────────────────────────────────────

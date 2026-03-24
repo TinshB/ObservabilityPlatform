@@ -39,7 +39,7 @@ import { formatDuration } from '@/utils/traceUtils'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const DEFAULT_RANGE = 'LAST_1H'
+const DEFAULT_RANGE = 'LAST_15M'
 
 // ── Sorting ─────────────────────────────────────────────────────────────────
 
@@ -147,7 +147,9 @@ export default function TraceViewerPage() {
 
     setLoading(true)
     try {
-      const params: TransactionSearchParams = {}
+      const params: TransactionSearchParams = {
+        serviceName: selectedService.name,
+      }
 
       if (customRange) {
         params.start = customRange.start.toISOString()
