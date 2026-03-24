@@ -19,7 +19,7 @@ export async function getServices(params: ServiceListParams = {}): Promise<Paged
 }
 
 export async function getServiceById(id: string): Promise<Service> {
-  const { data } = await api.get<ApiResponse<Service>>(`/services/${id}`)
+  const { data } = await api.get<ApiResponse<Service>>(`/services/detail/${id}`)
   return data.data
 }
 
@@ -33,18 +33,18 @@ export async function createService(payload: {
 export async function updateService(id: string, payload: {
   description?: string; ownerTeam?: string; environment?: string; tier?: string; active?: boolean
 }): Promise<Service> {
-  const { data } = await api.put<ApiResponse<Service>>(`/services/${id}`, payload)
+  const { data } = await api.put<ApiResponse<Service>>(`/services/detail/${id}`, payload)
   return data.data
 }
 
 export async function deactivateService(id: string): Promise<void> {
-  await api.delete<ApiResponse<void>>(`/services/${id}`)
+  await api.delete<ApiResponse<void>>(`/services/detail/${id}`)
 }
 
 export async function toggleSignals(id: string, payload: {
   metricsEnabled?: boolean; logsEnabled?: boolean; tracesEnabled?: boolean
 }): Promise<Service> {
-  const { data } = await api.patch<ApiResponse<Service>>(`/services/${id}/signals`, payload)
+  const { data } = await api.patch<ApiResponse<Service>>(`/services/detail/${id}/signals`, payload)
   return data.data
 }
 

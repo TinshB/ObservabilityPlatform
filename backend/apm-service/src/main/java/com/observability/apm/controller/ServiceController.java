@@ -67,7 +67,7 @@ public class ServiceController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(service));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/detail/{id}")
     @Operation(summary = "Update service metadata",
             description = "Update description, owner team, environment, tier, or active status")
     public ResponseEntity<ApiResponse<ServiceResponse>> updateService(
@@ -77,7 +77,7 @@ public class ServiceController {
         return ResponseEntity.ok(ApiResponse.success(service, "Service updated successfully"));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/detail/{id}")
     @Operation(summary = "Deactivate service",
             description = "Soft-delete a service by setting is_active to false")
     public ResponseEntity<ApiResponse<Void>> deactivateService(@PathVariable UUID id) {
@@ -87,7 +87,7 @@ public class ServiceController {
 
     // ── Story 4.7: Signal toggle ────────────────────────────────────────────────
 
-    @PatchMapping("/{id}/signals")
+    @PatchMapping("/detail/{id}/signals")
     @Operation(summary = "Toggle signals",
             description = "Enable or disable metrics, logs, and/or traces for a service. Null fields are left unchanged.")
     public ResponseEntity<ApiResponse<ServiceResponse>> toggleSignals(
@@ -135,7 +135,7 @@ public class ServiceController {
 
     // ── Get by ID (must be LAST — /{id} is a catch-all path variable) ────────
 
-    @GetMapping("/{id:[0-9a-fA-F\\-]{36}}")
+    @GetMapping("/detail/{id}")
     @Operation(summary = "Get service",
             description = "Retrieve a single service by ID")
     public ResponseEntity<ApiResponse<ServiceResponse>> getService(@PathVariable UUID id) {
