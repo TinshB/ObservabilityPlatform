@@ -2,10 +2,12 @@ package com.observability.apm.controller;
 
 import com.observability.apm.dto.AutoRegisterRequest;
 import com.observability.apm.dto.CreateServiceRequest;
+import com.observability.apm.dto.JaegerServiceInfo;
 import com.observability.apm.dto.ServiceFilterResponse;
 import com.observability.apm.dto.ServiceResponse;
 import com.observability.apm.dto.SignalToggleRequest;
 import com.observability.apm.dto.UpdateServiceRequest;
+import com.observability.apm.service.JaegerServiceDiscoveryService;
 import com.observability.apm.service.ServiceCatalogService;
 import com.observability.shared.dto.ApiResponse;
 import com.observability.shared.dto.PagedResponse;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -40,6 +43,7 @@ import java.util.UUID;
 public class ServiceController {
 
     private final ServiceCatalogService serviceCatalogService;
+    private final JaegerServiceDiscoveryService jaegerDiscoveryService;
 
     // ── Story 4.5: Auto-register from OTel pipeline ─────────────────────────────
 
@@ -124,5 +128,16 @@ public class ServiceController {
     public ResponseEntity<ApiResponse<ServiceFilterResponse>> getFilterOptions() {
         ServiceFilterResponse filters = serviceCatalogService.getFilterOptions();
         return ResponseEntity.ok(ApiResponse.success(filters));
+    }
+
+    // ── Jaeger-based service discovery ────────────────────────────────────────
+
+    @GetMapping("/discover")
+    @Operation(summary = "Discover services from Jaeger",
+            description = "Lists all services known to Jaeger with their type (language), error rate, and throughput")
+    public ResponseEntity<ApiResponse<List<JaegerServiceInfo>>> discoverServices(
+            @RequestParam(defaultValue = "900") long lookbackSeconds) {
+        List<JaegerServiceInfo> services = jaegerDiscoveryService.discoverServices(lookbackSeconds);
+        return ResponseEntity.ok(ApiResponse.success(services));
     }
 }

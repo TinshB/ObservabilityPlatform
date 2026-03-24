@@ -65,10 +65,21 @@ export default function TraceViewerPage() {
 
   // ── Custom date range (calendar popover) ───────────────────────────────
   const [customRange, setCustomRange]       = useState<{ start: Date; end: Date } | null>(null)
-  const [timeLabel, setTimeLabel]           = useState('Last 1 hour')
+  const [timeLabel, setTimeLabel]           = useState('Last 15 minutes')
   const [calendarAnchor, setCalendarAnchor] = useState<HTMLElement | null>(null)
   const [pickerStart, setPickerStart]       = useState<Dayjs | null>(null)
   const [pickerEnd, setPickerEnd]           = useState<Dayjs | null>(null)
+
+  // Initialise custom range from URL params (preserves time range on breadcrumb back-nav)
+  useEffect(() => {
+    const urlStart = searchParams.get('start')
+    const urlEnd   = searchParams.get('end')
+    if (urlStart && urlEnd) {
+      setCustomRange({ start: new Date(urlStart), end: new Date(urlEnd) })
+      setSelectedRange('')
+      setTimeLabel(`${dayjs(urlStart).format('MMM D, HH:mm')} — ${dayjs(urlEnd).format('MMM D, HH:mm')}`)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Transaction data ──────────────────────────────────────────────────
   const [transactions, setTransactions] = useState<TransactionSummary[]>([])

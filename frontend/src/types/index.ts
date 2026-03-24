@@ -141,6 +141,17 @@ export interface ServiceFilters {
   tiers:        string[]
 }
 
+/** Service discovered from Jaeger traces. */
+export interface JaegerServiceInfo {
+  name:        string
+  serviceType: string
+  errorRate:   number
+  throughput:  number
+  traceCount:  number
+  spanCount:   number
+  registered:  boolean
+}
+
 // ── Metrics ──────────────────────────────────────────────────────────────────
 
 export interface MetricDataPoint {

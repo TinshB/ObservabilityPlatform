@@ -571,20 +571,34 @@ export default function TraceDetailPage() {
   }>({ open: false, message: '', severity: 'info' })
 
   // ── Breadcrumb: Home → Transactions → <serviceName> → <operation> → <traceId>
+  const rangeParam = searchParams.get('range') ?? ''
+  const startParam = searchParams.get('start') ?? ''
+  const endParam   = searchParams.get('end') ?? ''
+
   useCustomBreadcrumbs(
     useMemo(() => {
+      // Build time range query fragment
+      let timeQs = ''
+      if (startParam && endParam) {
+        timeQs = `start=${startParam}&end=${endParam}`
+      } else if (rangeParam) {
+        timeQs = `range=${rangeParam}`
+      }
+
+      const svcParam = serviceId ? `service=${serviceId}` : ''
+      const svcNameParam = serviceName ? `serviceName=${serviceName}` : ''
+      const txnListQs = [svcParam, timeQs].filter(Boolean).join('&')
+
       const c = [
         { label: 'Home', path: '/home' },
-        { label: 'Transactions', path: '/transactions' },
+        { label: 'Transactions', path: `/transactions${txnListQs ? `?${txnListQs}` : ''}` },
       ]
       if (serviceName) {
-        c.push({ label: serviceName, path: `/transactions?service=${serviceId}` })
+        const svcQs = [svcParam, timeQs].filter(Boolean).join('&')
+        c.push({ label: serviceName, path: `/transactions?${svcQs}` })
       }
       if (decodedOperation) {
-        const opParams = new URLSearchParams()
-        if (serviceId) opParams.set('service', serviceId)
-        if (serviceName) opParams.set('serviceName', serviceName)
-        const opQs = opParams.toString()
+        const opQs = [svcParam, svcNameParam, timeQs].filter(Boolean).join('&')
         c.push({
           label: decodedOperation,
           path: `/transactions/${encodeURIComponent(decodedOperation)}${opQs ? `?${opQs}` : ''}`,
@@ -592,7 +606,7 @@ export default function TraceDetailPage() {
       }
       c.push({ label: traceId ? `${traceId.substring(0, 16)}…` : '', path: '' })
       return c
-    }, [serviceName, serviceId, decodedOperation, traceId]),
+    }, [serviceName, serviceId, decodedOperation, traceId, rangeParam, startParam, endParam]),
   )
 
   // Fetch trace detail

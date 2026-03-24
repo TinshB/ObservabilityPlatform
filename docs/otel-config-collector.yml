@@ -86,11 +86,11 @@
             type: latency
             latency:
               threshold_ms: 1000
-          # Sample 20% of remaining successful traces (tune this value)
+          # Sample 80% of remaining successful traces (tune this value)
           - name: probabilistic-sample
             type: probabilistic
             probabilistic:
-              sampling_percentage: 20
+              sampling_percentage: 80
 
     exporters:
 

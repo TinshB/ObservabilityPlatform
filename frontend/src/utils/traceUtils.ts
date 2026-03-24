@@ -15,8 +15,25 @@ export function formatTime(iso: string): string {
   } as Intl.DateTimeFormatOptions)
 }
 
-/** Build display label for root operation: METHOD path (prefers actual path over route template). */
-export function formatRootOperation(trace: TraceSummary): string {
+/**
+ * Transaction-level label: uses http.route template for grouping.
+ * e.g. "GET /api/v1/services/{serviceId}/traces"
+ */
+export function formatTransaction(trace: TraceSummary): string {
+  const method = trace.httpMethod ?? ''
+  const path = trace.httpRoute ?? trace.httpPath ?? trace.httpUrl ?? ''
+
+  if (method && path) return `${method} ${path}`
+  if (method) return method
+  if (path) return path
+  return trace.rootOperation
+}
+
+/**
+ * Trace-level label: uses actual url.path for individual trace display.
+ * e.g. "GET /api/v1/services/db5c3242-2906-4f0e-b5b1-a7b88a474628/traces"
+ */
+export function formatTracePath(trace: TraceSummary): string {
   const method = trace.httpMethod ?? ''
   const path = trace.httpPath ?? trace.httpRoute ?? trace.httpUrl ?? ''
 

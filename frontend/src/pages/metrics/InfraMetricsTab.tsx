@@ -48,29 +48,44 @@ interface Props {
 function GaugeCard({ title, value, maxLabel }: { title: string; value: number | null; maxLabel?: string }) {
   const pct = value != null ? Math.min(value * 100, 100) : 0
   const color = pct > 90 ? '#d32f2f' : pct > 70 ? '#ed6c02' : '#2e7d32'
-  const gaugeData = [{ name: title, value: pct, fill: color }]
+  // Arc spans 270° (from 225° to -45°). Calculate the end angle for the filled portion.
+  const totalAngle = 270
+  const filledEndAngle = 225 - (pct / 100) * totalAngle
 
   return (
     <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
       <Typography variant="body2" color="text.secondary" gutterBottom>{title}</Typography>
-      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
+        {/* Background arc (full track) */}
         <ResponsiveContainer width={140} height={140}>
           <RadialBarChart
             innerRadius="70%"
             outerRadius="100%"
-            data={gaugeData}
+            data={[{ value: 100, fill: 'rgba(0,0,0,0.06)' }]}
             startAngle={225}
             endAngle={-45}
             cx="50%"
             cy="50%"
           >
-            <RadialBar
-              dataKey="value"
-              cornerRadius={8}
-              background={{ fill: 'rgba(0,0,0,0.06)' }}
-            />
+            <RadialBar dataKey="value" cornerRadius={8} />
           </RadialBarChart>
         </ResponsiveContainer>
+        {/* Filled arc (actual value) */}
+        <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', justifyContent: 'center' }}>
+          <ResponsiveContainer width={140} height={140}>
+            <RadialBarChart
+              innerRadius="70%"
+              outerRadius="100%"
+              data={[{ value: pct, fill: color }]}
+              startAngle={225}
+              endAngle={filledEndAngle}
+              cx="50%"
+              cy="50%"
+            >
+              <RadialBar dataKey="value" cornerRadius={8} />
+            </RadialBarChart>
+          </ResponsiveContainer>
+        </Box>
       </Box>
       <Typography variant="h5" fontWeight={700} sx={{ mt: -2 }}>
         {value != null ? `${pct.toFixed(1)}%` : 'N/A'}
@@ -284,6 +299,7 @@ export default function InfraMetricsTab({ serviceId, serviceName, params }: Prop
               <XAxis dataKey="time" tickFormatter={formatTime} tick={{ fontSize: 12 }} stroke="rgba(0,0,0,0.3)" />
               <YAxis
                 yAxisId="left"
+                domain={[0, 'auto']}
                 tickFormatter={(v) => formatCores(v)}
                 tick={{ fontSize: 12 }}
                 stroke="rgba(0,0,0,0.3)"
@@ -329,14 +345,14 @@ export default function InfraMetricsTab({ serviceId, serviceName, params }: Prop
             <AreaChart data={heapData} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
               <XAxis dataKey="time" tickFormatter={formatTime} tick={{ fontSize: 12 }} stroke="rgba(0,0,0,0.3)" />
-              <YAxis tickFormatter={(v) => formatBytes(v)} tick={{ fontSize: 12 }} stroke="rgba(0,0,0,0.3)" width={70} />
+              <YAxis domain={[0, 'auto']} tickFormatter={(v) => formatBytes(v)} tick={{ fontSize: 12 }} stroke="rgba(0,0,0,0.3)" width={70} />
               <Tooltip
                 labelFormatter={(label) => formatDateTime(label as number)}
                 formatter={(value: unknown, name: unknown) => [formatBytes(value as number), name as string]}
               />
               <Legend />
               <Area type="monotone" dataKey="Heap Used" stroke={CHART_COLORS[0]} fill={CHART_COLORS[0]} fillOpacity={0.2} strokeWidth={2} />
-              <Area type="monotone" dataKey="Heap Committed" stroke={CHART_COLORS[3]} fill={CHART_COLORS[3]} fillOpacity={0.1} strokeWidth={1.5} />
+              <Area type="monotone" dataKey="Heap Committed" stroke={CHART_COLORS[3]} fill="none" strokeWidth={1.5} />
               <Area type="monotone" dataKey="Heap Max" stroke={CHART_COLORS[2]} fill="none" strokeWidth={1.5} strokeDasharray="5 5" />
             </AreaChart>
           </ResponsiveContainer>
@@ -357,7 +373,7 @@ export default function InfraMetricsTab({ serviceId, serviceName, params }: Prop
             <LineChart data={nonHeapRssData} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
               <XAxis dataKey="time" tickFormatter={formatTime} tick={{ fontSize: 12 }} stroke="rgba(0,0,0,0.3)" />
-              <YAxis tickFormatter={(v) => formatBytes(v)} tick={{ fontSize: 12 }} stroke="rgba(0,0,0,0.3)" width={70} />
+              <YAxis domain={[0, 'auto']} tickFormatter={(v) => formatBytes(v)} tick={{ fontSize: 12 }} stroke="rgba(0,0,0,0.3)" width={70} />
               <Tooltip
                 labelFormatter={(label) => formatDateTime(label as number)}
                 formatter={(value: unknown, name: unknown) => [formatBytes(value as number), name as string]}

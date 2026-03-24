@@ -16,7 +16,6 @@ import {
   Alert,
   Skeleton,
   Tooltip,
-  LinearProgress,
   Button,
   IconButton,
   MenuItem,
@@ -39,7 +38,7 @@ import type { TraceSummary, TraceSearchParams, TimeRangePreset } from '@/types'
 import * as traceService from '@/services/traceService'
 import * as metricsService from '@/services/metricsService'
 import { useCustomBreadcrumbs } from '@/hooks/useBreadcrumb'
-import { formatDuration, formatTime, formatRootOperation } from '@/utils/traceUtils'
+import { formatDuration, formatTime, formatTracePath, formatTransaction } from '@/utils/traceUtils'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -61,7 +60,7 @@ interface ColumnDef {
 const ALL_COLUMNS: ColumnDef[] = [
   { key: 'traceId',        label: 'Trace ID',        sortable: false, defaultVisible: true },
   { key: 'rootService',    label: 'Root Service',    sortable: false, defaultVisible: true },
-  { key: 'rootOperation',  label: 'Root Operation',  sortable: false, defaultVisible: true },
+  { key: 'rootOperation',  label: 'Operation',        sortable: false, defaultVisible: true },
   { key: 'startTime',      label: 'Start Time',      sortable: true,  defaultVisible: true },
   { key: 'httpStatusCode', label: 'HTTP Status',     sortable: true,  defaultVisible: true },
   { key: 'duration',       label: 'Duration',        sortable: false, defaultVisible: true },
@@ -71,49 +70,6 @@ const ALL_COLUMNS: ColumnDef[] = [
 ]
 
 const DEFAULT_VISIBLE = new Set<ColumnKey>(ALL_COLUMNS.filter(c => c.defaultVisible).map(c => c.key))
-
-// ── Duration bar ────────────────────────────────────────────────────────────
-
-function DurationBar({ durationMicros, maxDuration, hasError }: {
-  durationMicros: number
-  maxDuration: number
-  hasError: boolean
-}) {
-  const pct = maxDuration > 0 ? Math.max((durationMicros / maxDuration) * 100, 2) : 2
-
-  return (
-    <Tooltip title={formatDuration(durationMicros)} arrow>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 140 }}>
-        <Box sx={{ flexGrow: 1, position: 'relative' }}>
-          <LinearProgress
-            variant="determinate"
-            value={pct}
-            sx={{
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: 'action.disabledBackground',
-              '& .MuiLinearProgress-bar': {
-                borderRadius: 4,
-                backgroundColor: hasError ? 'error.main' : 'primary.main',
-              },
-            }}
-          />
-        </Box>
-        <Typography
-          variant="caption"
-          sx={{
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: '0.75rem',
-            minWidth: 60,
-            textAlign: 'right',
-          }}
-        >
-          {formatDuration(durationMicros)}
-        </Typography>
-      </Box>
-    </Tooltip>
-  )
-}
 
 // ── Error indicator ─────────────────────────────────────────────────────────
 
@@ -219,18 +175,31 @@ export default function TransactionTracesPage() {
   const calendarOpen = Boolean(calendarAnchor)
 
   // ── Breadcrumb: Home → Transactions → <serviceName> → <operation> ──
+  // Build time range query string for breadcrumb links
+  const timeQs = useMemo(() => {
+    if (customRange) {
+      return `start=${customRange.start.toISOString()}&end=${customRange.end.toISOString()}`
+    }
+    if (selectedRange) return `range=${selectedRange}`
+    return ''
+  }, [selectedRange, customRange])
+
   useCustomBreadcrumbs(
     useMemo(() => {
+      const svcParams = serviceId ? `service=${serviceId}` : ''
+      const timeParam = timeQs ? `&${timeQs}` : ''
+      const txnListQs = [svcParams, timeQs].filter(Boolean).join('&')
+
       const c = [
         { label: 'Home', path: '/home' },
-        { label: 'Transactions', path: '/transactions' },
+        { label: 'Transactions', path: `/transactions${txnListQs ? `?${txnListQs}` : ''}` },
       ]
       if (serviceName) {
-        c.push({ label: serviceName, path: `/transactions?service=${serviceId}` })
+        c.push({ label: serviceName, path: `/transactions?${svcParams}${timeParam}` })
       }
       c.push({ label: decodedOperation, path: '' })
       return c
-    }, [serviceName, serviceId, decodedOperation]),
+    }, [serviceName, serviceId, decodedOperation, timeQs]),
   )
 
   // ── Trace data ──────────────────────────────────────────────────────────
@@ -276,8 +245,10 @@ export default function TransactionTracesPage() {
       if (maxDuration.trim()) params.maxDuration = maxDuration.trim()
 
       const result = await traceService.getServiceTraces(serviceId, params)
-      setTraces(result.traces)
-      setTotal(result.total)
+      // Filter to only traces matching the selected transaction route
+      const filtered = result.traces.filter(t => formatTransaction(t) === decodedOperation)
+      setTraces(filtered)
+      setTotal(filtered.length)
     } catch {
       setSnackbar({ open: true, message: 'Failed to load traces', severity: 'error' })
       setTraces([])
@@ -361,10 +332,6 @@ export default function TransactionTracesPage() {
 
   const visibleColumnDefs = ALL_COLUMNS.filter(c => visibleColumns.has(c.key))
 
-  // Max duration for bar scaling
-  const maxDurationValue = traces.length > 0
-    ? Math.max(...traces.map((t) => t.durationMicros))
-    : 1
 
   return (
     <Box>
@@ -507,7 +474,7 @@ export default function TransactionTracesPage() {
                 </TableRow>
               ) : (
                 sortedTraces.map((trace) => {
-                  const opLabel = formatRootOperation(trace)
+                  const opLabel = formatTracePath(trace)
                   return (
                     <TableRow
                       key={trace.traceId}
@@ -585,11 +552,16 @@ export default function TransactionTracesPage() {
 
                       {visibleColumns.has('duration') && (
                         <TableCell>
-                          <DurationBar
-                            durationMicros={trace.durationMicros}
-                            maxDuration={maxDurationValue}
-                            hasError={trace.errorCount > 0}
-                          />
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '0.8rem',
+                              color: trace.errorCount > 0 ? 'error.main' : 'text.primary',
+                            }}
+                          >
+                            {formatDuration(trace.durationMicros)}
+                          </Typography>
                         </TableCell>
                       )}
 

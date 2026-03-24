@@ -1,5 +1,5 @@
 import api from './api'
-import type { ApiResponse, PagedResponse, Service, ServiceFilters } from '@/types'
+import type { ApiResponse, PagedResponse, Service, ServiceFilters, JaegerServiceInfo } from '@/types'
 
 export interface ServiceListParams {
   page?: number
@@ -50,5 +50,13 @@ export async function toggleSignals(id: string, payload: {
 
 export async function getFilterOptions(): Promise<ServiceFilters> {
   const { data } = await api.get<ApiResponse<ServiceFilters>>('/services/filters')
+  return data.data
+}
+
+export async function discoverServices(lookbackSeconds = 900): Promise<JaegerServiceInfo[]> {
+  const { data } = await api.get<ApiResponse<JaegerServiceInfo[]>>(
+    '/services/discover',
+    { params: { lookbackSeconds } },
+  )
   return data.data
 }

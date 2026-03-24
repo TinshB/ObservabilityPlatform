@@ -9,7 +9,7 @@ import type {
   SpanBreakupResponse,
   CorrelationResponse,
 } from '@/types'
-import { formatRootOperation } from '@/utils/traceUtils'
+import { formatTransaction } from '@/utils/traceUtils'
 
 /** Story 7.2: List traces for a service with filters. */
 export async function getServiceTraces(
@@ -64,19 +64,20 @@ export async function getServiceTransactions(
   // from the queried service's spans (not just the root span).
 
   // Group traces by operation key
-  const groups = new Map<string, { service: string; traces: typeof result.traces }>()
+  const selectedService = params.serviceName ?? ''
+  const groups = new Map<string, typeof result.traces>()
   for (const trace of result.traces) {
-    const key = formatRootOperation(trace)
+    const key = formatTransaction(trace)
     if (!groups.has(key)) {
-      groups.set(key, { service: trace.rootService, traces: [] })
+      groups.set(key, [])
     }
-    groups.get(key)!.traces.push(trace)
+    groups.get(key)!.push(trace)
   }
 
-  const transactions = Array.from(groups.entries()).map(([txn, { service, traces }]) => {
+  const transactions = Array.from(groups.entries()).map(([txn, traces]) => {
     const errorTraces = traces.filter(t => t.errorCount > 0).length
     return {
-      serviceName:           service,
+      serviceName:           selectedService || traces[0]?.rootService || 'unknown',
       transaction:           txn,
       errorRate:             traces.length > 0 ? (errorTraces / traces.length) * 100 : 0,
       requestsPerSecond:     traces.length / rangeSeconds,
