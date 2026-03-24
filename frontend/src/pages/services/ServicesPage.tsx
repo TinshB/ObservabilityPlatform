@@ -75,6 +75,9 @@ export default function ServicesPage() {
     try {
       const data = await serviceService.discoverServices(900)
       setJaegerServices(data)
+      // Refetch DB services since discovery auto-registers new ones
+      const dbData = await serviceService.getServices({ size: 500 })
+      setServices(dbData.content)
     } catch {
       setSnackbar({ open: true, message: 'Failed to discover services from Jaeger', severity: 'error' })
     } finally {
@@ -253,12 +256,16 @@ export default function ServicesPage() {
                       </Typography>
                     </TableCell>
                   </TableRow>
-                ) : filteredJaegerServices.map((svc) => (
+                ) : filteredJaegerServices.map((svc) => {
+                  const dbSvc = services.find(s => s.name === svc.name)
+                  return (
                   <TableRow
                     key={svc.name}
                     hover
                     sx={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/services/by-name/${encodeURIComponent(svc.name)}`)}
+                    onClick={() => {
+                      if (dbSvc) navigate(`/services/${dbSvc.id}`)
+                    }}
                   >
                     <TableCell>
                       <Typography fontWeight={600} fontSize="0.875rem" color="primary.main">
@@ -300,7 +307,8 @@ export default function ServicesPage() {
                       />
                     </TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           </TableContainer>

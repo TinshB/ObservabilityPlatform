@@ -93,7 +93,6 @@ export default function AppRoutes() {
             <Route path="/home" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
             <Route path="/apm" element={<ErrorBoundary><ApmOverviewPage /></ErrorBoundary>} />
             <Route path="/services" element={<ErrorBoundary><ServicesPage /></ErrorBoundary>} />
-            <Route path="/services/by-name/:serviceName" element={<ErrorBoundary><ServiceDeepDivePage /></ErrorBoundary>} />
             <Route path="/services/:serviceId" element={<ErrorBoundary><ServiceDeepDivePage /></ErrorBoundary>} />
             <Route path="/metrics" element={<ErrorBoundary><MetricsExplorerPage /></ErrorBoundary>} />
             <Route path="/logs" element={<ErrorBoundary><LogExplorerPage /></ErrorBoundary>} />
