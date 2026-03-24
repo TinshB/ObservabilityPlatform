@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   Box, Typography, Button, Paper, IconButton, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, MenuItem, Alert, Snackbar, Tooltip, Chip, Skeleton,
-  Divider, Card, CardContent, Autocomplete, CircularProgress,
+  Divider, Card, Autocomplete, CircularProgress,
 } from '@mui/material'
 import ArrowBackIcon    from '@mui/icons-material/ArrowBack'
 import AddIcon          from '@mui/icons-material/Add'
@@ -339,7 +339,11 @@ export default function WorkflowBuilderPage() {
           </Box>
         )}
         <Box>
-          <Typography variant="caption" color="text.secondary">Steps</Typography>
+          <Typography variant="caption" color="text.secondary">Stages</Typography>
+          <Typography variant="body2" fontWeight={600}>{sortedStepOrders.length}</Typography>
+        </Box>
+        <Box>
+          <Typography variant="caption" color="text.secondary">APIs</Typography>
           <Typography variant="body2" fontWeight={600}>{steps.length}</Typography>
         </Box>
         {workflow.maxDurationMs != null && (
@@ -371,31 +375,66 @@ export default function WorkflowBuilderPage() {
           <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
             Workflow Pipeline
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 'max-content' }}>
+          <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 0.5, minWidth: 'max-content' }}>
             {sortedStepOrders.map((order, i) => {
               const group = groupedSteps.get(order)!
+              const label = group[0].label || `Step ${order}`
               return (
                 <React.Fragment key={order}>
                   <Box sx={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    px: 2, py: 1, borderRadius: 1, border: '1px solid',
-                    borderColor: 'divider', backgroundColor: 'background.paper', minWidth: 120,
+                    display: 'flex', flexDirection: 'column',
+                    borderRadius: 2, border: '2px solid', borderColor: 'primary.main',
+                    backgroundColor: 'background.paper', minWidth: 180, maxWidth: 280, overflow: 'hidden',
                   }}>
-                    <Typography variant="caption" fontWeight={700} sx={{ mb: 0.5 }}>
-                      {group[0].label || `Step ${order}`}
-                    </Typography>
-                    {group.map((step) => (
-                      <Box key={step.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.3 }}>
-                        <Chip label={step.httpMethod} size="small" color={methodColor(step.httpMethod)}
-                          sx={{ fontWeight: 600, fontSize: '0.65rem', height: 18 }} />
-                        <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 120 }}>
-                          {step.serviceName}
-                        </Typography>
+                    {/* Stage header */}
+                    <Box sx={{
+                      display: 'flex', alignItems: 'center', gap: 1,
+                      px: 1.5, py: 0.75,
+                      backgroundColor: 'primary.main', color: 'primary.contrastText',
+                    }}>
+                      <Box sx={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        backgroundColor: 'rgba(255,255,255,0.25)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.7rem', fontWeight: 700, flexShrink: 0,
+                      }}>
+                        {order}
                       </Box>
-                    ))}
+                      <Typography variant="caption" fontWeight={700} noWrap>
+                        {label}
+                      </Typography>
+                      {group.length > 1 && (
+                        <Chip label={`${group.length} APIs`} size="small"
+                          sx={{ ml: 'auto', height: 18, fontSize: '0.6rem', fontWeight: 700,
+                            backgroundColor: 'rgba(255,255,255,0.2)', color: 'inherit' }} />
+                      )}
+                    </Box>
+                    {/* API entries */}
+                    <Box sx={{ px: 1.5, py: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      {group.map((step) => (
+                        <Box key={step.id} sx={{
+                          display: 'flex', alignItems: 'center', gap: 0.5,
+                          p: 0.5, borderRadius: 1, backgroundColor: 'action.hover',
+                        }}>
+                          <Chip label={step.httpMethod} size="small" color={methodColor(step.httpMethod)}
+                            sx={{ fontWeight: 600, fontSize: '0.6rem', height: 18, minWidth: 42 }} />
+                          <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
+                            <Typography variant="caption" fontWeight={600} noWrap sx={{ display: 'block', fontSize: '0.7rem' }}>
+                              {step.serviceName}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" noWrap
+                              sx={{ display: 'block', fontSize: '0.65rem', fontFamily: '"JetBrains Mono", monospace' }}>
+                              {step.pathPattern}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
                   </Box>
                   {i < sortedStepOrders.length - 1 && (
-                    <ArrowForwardIcon sx={{ color: 'text.disabled', fontSize: 20 }} />
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <ArrowForwardIcon sx={{ color: 'text.disabled', fontSize: 22 }} />
+                    </Box>
                   )}
                 </React.Fragment>
               )
@@ -419,52 +458,40 @@ export default function WorkflowBuilderPage() {
           </Typography>
         </Paper>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {sortedStepOrders.map((order) => {
             const group = groupedSteps.get(order)!
             const label = group[0]?.label
             return (
               <Card key={order} variant="outlined"
                 sx={{
-                  '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' },
+                  '&:hover': { borderColor: 'primary.main' },
                   transition: 'all 0.15s ease',
+                  overflow: 'hidden',
                 }}
               >
-                <CardContent sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, py: '12px !important' }}>
-                  {/* Step order badge */}
+                {/* Step header bar */}
+                <Box sx={{
+                  display: 'flex', alignItems: 'center', gap: 1.5,
+                  px: 2, py: 1,
+                  backgroundColor: 'action.hover',
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
+                }}>
                   <Box sx={{
                     width: 28, height: 28, borderRadius: '50%', backgroundColor: 'primary.main',
                     color: 'primary.contrastText', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 700, fontSize: '0.8rem', flexShrink: 0, mt: 0.5,
+                    fontWeight: 700, fontSize: '0.8rem', flexShrink: 0,
                   }}>
                     {order}
                   </Box>
-
-                  {/* Step label + API entries */}
-                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                    {label && (
-                      <Typography variant="body2" fontWeight={700} sx={{ mb: 0.5 }}>{label}</Typography>
-                    )}
-                    {group.map((step) => (
-                      <Box key={step.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-                        <Chip label={step.httpMethod} size="small" color={methodColor(step.httpMethod)}
-                          sx={{ fontWeight: 600, minWidth: 55, flexShrink: 0, fontSize: '0.75rem' }} />
-                        <Typography variant="body2" fontWeight={500} sx={{ minWidth: 100 }}>
-                          {step.serviceName}
-                        </Typography>
-                        <Typography variant="body2" fontFamily="monospace" fontSize="0.85rem" color="text.secondary" noWrap>
-                          {step.pathPattern}
-                        </Typography>
-                      </Box>
-                    ))}
-                    {group.length > 1 && (
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                        {group.length} API configurations in this step
-                      </Typography>
-                    )}
-                  </Box>
-
-                  {/* Actions */}
+                  <Typography variant="body2" fontWeight={700} sx={{ flexGrow: 1 }}>
+                    {label || `Step ${order}`}
+                  </Typography>
+                  {group.length > 1 && (
+                    <Chip label={`${group.length} APIs`} size="small" variant="outlined"
+                      sx={{ fontSize: '0.7rem', height: 22, fontWeight: 600 }} />
+                  )}
                   <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
                     <Tooltip title="Edit step">
                       <IconButton size="small" onClick={() => openEditStepGroup(order)}>
@@ -477,7 +504,28 @@ export default function WorkflowBuilderPage() {
                       </IconButton>
                     </Tooltip>
                   </Box>
-                </CardContent>
+                </Box>
+
+                {/* API entries */}
+                <Box sx={{ px: 2, py: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                  {group.map((step, idx) => (
+                    <Box key={step.id} sx={{
+                      display: 'flex', alignItems: 'center', gap: 1.5,
+                      p: 1, borderRadius: 1,
+                      backgroundColor: idx % 2 === 0 ? 'transparent' : 'action.hover',
+                    }}>
+                      <Chip label={step.httpMethod} size="small" color={methodColor(step.httpMethod)}
+                        sx={{ fontWeight: 600, minWidth: 55, flexShrink: 0, fontSize: '0.75rem' }} />
+                      <Typography variant="body2" fontWeight={500} sx={{ minWidth: 120 }}>
+                        {step.serviceName}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" noWrap
+                        sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.82rem' }}>
+                        {step.pathPattern}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
               </Card>
             )
           })}

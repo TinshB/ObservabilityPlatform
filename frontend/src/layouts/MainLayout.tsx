@@ -162,7 +162,7 @@ export default function MainLayout() {
   const navItemButton = (label: string, icon: React.ReactNode, path: string, comingSoon?: boolean) => (
     <ListItem key={path} disablePadding>
       <ListItemButton
-        selected={location.pathname === path || (path !== '/home' && location.pathname.startsWith(path + '/'))}
+        selected={location.pathname === path || (path !== '/home' && location.pathname.startsWith(path + '/') && ![...NAV_ITEMS, ...ADMIN_ITEMS].some(item => item.path !== path && item.path === location.pathname))}
         onClick={() => {
           navigate(path)
           if (isMobile) setMobileOpen(false)

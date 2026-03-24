@@ -65,31 +65,6 @@ processors:
         - 'name == "otelcol_process_runtime_heap_alloc_bytes"'
         - 'name == "otelcol_process_runtime_total_sys_memory_bytes"'
 
-  # ── Tail Sampling (Traces) ────────────────────────────────────
-  # Smart sampling: keeps all errors & slow traces, samples the rest
-  # Adjust sampling_percentage to control trace volume
-  tail_sampling:
-    decision_wait: 10s
-    num_traces: 100000
-    expected_new_traces_per_sec: 100
-    policies:
-      # Always keep traces with errors
-      - name: errors-always-keep
-        type: status_code
-        status_code:
-          status_codes:
-            - ERROR
-      # Always keep traces slower than 1 second
-      - name: slow-traces-always-keep
-        type: latency
-        latency:
-          threshold_ms: 1000
-      # Sample 20% of remaining successful traces (tune this value)
-      - name: probabilistic-sample
-        type: probabilistic
-        probabilistic:
-          sampling_percentage: 80
-
 exporters:
 
   debug:
@@ -134,7 +109,7 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, filter/traces, tail_sampling, batch]
+      processors: [memory_limiter, filter/traces, batch]
       exporters: [debug, otlp]
     logs:
       receivers: [otlp]

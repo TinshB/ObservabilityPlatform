@@ -114,9 +114,7 @@ public class WorkflowService {
             stepOrder = workflowStepRepository.findMaxStepOrder(workflowId) + 1;
         } else {
             stepOrder = request.getStepOrder();
-            // If the requested order conflicts, shift existing steps to make room
-            workflowStepRepository.findByWorkflowIdAndStepOrder(workflowId, stepOrder)
-                    .ifPresent(existing -> workflowStepRepository.shiftStepOrdersUp(workflowId, stepOrder));
+            // Multiple APIs can share the same stepOrder (they form a single stage)
         }
 
         WorkflowStepEntity entity = WorkflowStepEntity.builder()
@@ -163,14 +161,7 @@ public class WorkflowService {
 
         validateHttpMethod(request.getHttpMethod());
 
-        // Check stepOrder uniqueness (if changed)
-        if (request.getStepOrder() != entity.getStepOrder()) {
-            workflowStepRepository.findByWorkflowIdAndStepOrder(workflowId, request.getStepOrder())
-                    .ifPresent(existing -> {
-                        throw new IllegalArgumentException(
-                                "Step order " + request.getStepOrder() + " already exists for this workflow");
-                    });
-        }
+        // stepOrder change is allowed — multiple APIs can share the same stepOrder
 
         entity.setStepOrder(request.getStepOrder());
         entity.setServiceName(request.getServiceName());
