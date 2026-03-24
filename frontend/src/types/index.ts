@@ -265,6 +265,8 @@ export interface UiMetricsResponse {
 export interface QuerySummary {
   operation:   string
   collection:  string
+  dbName?:     string | null
+  statement?:  string | null
   avgExecTime: number | null
   p95ExecTime: number | null
   callCount:   number | null

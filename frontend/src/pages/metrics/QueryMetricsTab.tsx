@@ -99,10 +99,35 @@ function QueryRow({ row }: { row: QuerySummary }) {
       <TableRow>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1, my: 1 }}>
+            <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1, my: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Typography variant="body2" color="text.secondary">
                 {row.operation} {row.collection} — Avg: {formatLatency(row.avgExecTime)}, P95: {formatLatency(row.p95ExecTime)}, Calls: {row.callCount != null ? formatNumber(row.callCount) : 'N/A'}/s
               </Typography>
+              {row.dbName && (
+                <Typography variant="caption" color="text.secondary">
+                  <strong>Database:</strong> {row.dbName}
+                </Typography>
+              )}
+              {row.statement && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '0.75rem',
+                    backgroundColor: 'background.paper',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    p: 1,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    maxHeight: 120,
+                    overflow: 'auto',
+                  }}
+                >
+                  {row.statement}
+                </Typography>
+              )}
             </Box>
           </Collapse>
         </TableCell>

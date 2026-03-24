@@ -49,8 +49,14 @@ public class QueryMetricsResponse {
         /** DB operation type (SELECT, INSERT, UPDATE, DELETE). */
         private String operation;
 
-        /** Target table / collection name. */
+        /** Target table / collection in format db.table (e.g. mydb.users). */
         private String collection;
+
+        /** Database name (db.name). */
+        private String dbName;
+
+        /** SQL statement or query text (db.statement). */
+        private String statement;
 
         /** Average execution time in seconds. */
         private Double avgExecTime;

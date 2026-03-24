@@ -124,6 +124,8 @@ public class JaegerQueryMetricsProvider {
     private record DbSpanData(
             String operation,
             String collection,
+            String dbName,
+            String statement,
             double durationSeconds,
             long startTimeEpochSeconds,
             boolean hasError
@@ -139,12 +141,19 @@ public class JaegerQueryMetricsProvider {
         if (!tags.containsKey("db.system")) return null;
 
         String operation = resolveOperation(tags, span.getOperationName());
-        String collection = resolveCollection(tags);
+        String dbName = resolveDbName(tags);
+        String table = resolveTable(tags);
+        String statement = tags.get("db.statement");
+        if (statement == null) statement = tags.get("db.query.text");
+
+        // Build collection as db.table format (e.g. "mydb.users")
+        String collection = buildCollectionLabel(dbName, table, tags);
+
         double durationSec = span.getDuration() / 1_000_000.0;
         long startEpochSec = span.getStartTime() / 1_000_000;
         boolean hasError = "true".equals(tags.get("error")) || "ERROR".equals(tags.get("otel.status_code"));
 
-        return new DbSpanData(operation, collection, durationSec, startEpochSec, hasError);
+        return new DbSpanData(operation, collection, dbName, statement, durationSec, startEpochSec, hasError);
     }
 
     private Map<String, String> extractTags(JaegerSpan span) {
@@ -181,22 +190,39 @@ public class JaegerQueryMetricsProvider {
         return "UNKNOWN";
     }
 
-    private String resolveCollection(Map<String, String> tags) {
-        // Try OTel semantic convention tags
-        for (String key : List.of("db.collection.name", "db.sql.table", "db.namespace",
-                "db.name", "db.cassandra.table", "db.mongodb.collection")) {
+    private String resolveDbName(Map<String, String> tags) {
+        for (String key : List.of("db.name", "db.namespace")) {
+            String val = tags.get(key);
+            if (val != null && !val.isEmpty()) return val;
+        }
+        return null;
+    }
+
+    private String resolveTable(Map<String, String> tags) {
+        for (String key : List.of("db.sql.table", "db.collection.name",
+                "db.cassandra.table", "db.mongodb.collection")) {
             String val = tags.get(key);
             if (val != null && !val.isEmpty()) return val;
         }
 
-        // Try parsing from db.statement
+        // Try parsing table from db.statement
         String stmt = tags.get("db.statement");
         if (stmt == null) stmt = tags.get("db.query.text");
         if (stmt != null) {
             Matcher m = SQL_TABLE_PATTERN.matcher(stmt);
             if (m.find()) return m.group(1);
         }
+        return null;
+    }
 
+    /**
+     * Build collection label as {db.name}.{table} format.
+     * Falls back to just table, just db.name, or db.system.
+     */
+    private String buildCollectionLabel(String dbName, String table, Map<String, String> tags) {
+        if (dbName != null && table != null) return dbName + "." + table;
+        if (table != null) return table;
+        if (dbName != null) return dbName;
         return tags.getOrDefault("db.system", "unknown");
     }
 
@@ -219,9 +245,15 @@ public class JaegerQueryMetricsProvider {
             double p95 = percentile(durations, 0.95);
             double callRate = (double) group.size() / rangeSecs;
 
+            // Pick dbName from first span, and most common statement
+            String dbName = group.stream().map(s -> s.dbName).filter(Objects::nonNull).findFirst().orElse(null);
+            String statement = group.stream().map(s -> s.statement).filter(Objects::nonNull).findFirst().orElse(null);
+
             summaries.add(QueryMetricsResponse.QuerySummary.builder()
                     .operation(parts[0])
                     .collection(parts.length > 1 ? parts[1] : "unknown")
+                    .dbName(dbName)
+                    .statement(statement)
                     .avgExecTime(avg)
                     .p95ExecTime(p95)
                     .callCount(callRate)

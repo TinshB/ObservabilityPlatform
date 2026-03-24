@@ -221,6 +221,15 @@ function SpanRow({
     (span.tags['http.response.status_code'] ? Number(span.tags['http.response.status_code']) : null) ??
     (span.tags['http.status_code'] ? Number(span.tags['http.status_code']) : null)
 
+  // Resolve DB info from tags
+  const dbSystem = span.tags['db.system']
+  const dbName = span.tags['db.name'] || span.tags['db.namespace']
+  const dbTable = span.tags['db.sql.table'] || span.tags['db.collection.name'] || span.tags['db.cassandra.table'] || span.tags['db.mongodb.collection']
+  const dbStatement = span.tags['db.statement'] || span.tags['db.query.text']
+  const dbOperation = span.tags['db.operation.name'] || span.tags['db.operation']
+  const hasDb = !!dbSystem
+  const dbTarget = [dbName, dbTable].filter(Boolean).join('.')
+
   const hasTags = Object.keys(span.tags).length > 0
   const hasLogs = span.logs.length > 0
   const hasHttp = span.httpMethod || span.httpUrl || effectiveStatusCode
@@ -397,6 +406,48 @@ function SpanRow({
                   </Typography>
                 )}
               </Box>
+            </Box>
+          )}
+
+          {/* Database info */}
+          {hasDb && (
+            <Box sx={{ mb: 1.5 }}>
+              <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                Database
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mb: dbStatement ? 1 : 0 }}>
+                <Chip label={dbSystem} size="small" color="primary" variant="outlined" sx={{ fontWeight: 600, fontSize: '0.7rem' }} />
+                {dbOperation && (
+                  <Chip label={dbOperation} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: '0.7rem' }} />
+                )}
+                {dbTarget && (
+                  <Typography variant="caption" fontWeight={600} sx={{ fontFamily: '"JetBrains Mono", monospace' }}>
+                    {dbTarget}
+                  </Typography>
+                )}
+              </Box>
+              {dbStatement && (
+                <Typography
+                  variant="caption"
+                  component="pre"
+                  sx={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '0.72rem',
+                    backgroundColor: 'background.paper',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    p: 1,
+                    m: 0,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    maxHeight: 150,
+                    overflow: 'auto',
+                  }}
+                >
+                  {dbStatement}
+                </Typography>
+              )}
             </Box>
           )}
 
