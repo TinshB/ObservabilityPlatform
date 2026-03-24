@@ -298,34 +298,19 @@ export default function InfraMetricsTab({ serviceId, serviceName, params }: Prop
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
               <XAxis dataKey="time" tickFormatter={formatTime} tick={{ fontSize: 12 }} stroke="rgba(0,0,0,0.3)" />
               <YAxis
-                yAxisId="left"
                 domain={[0, 'auto']}
                 tickFormatter={(v) => formatCores(v)}
                 tick={{ fontSize: 12 }}
                 stroke="rgba(0,0,0,0.3)"
                 width={70}
               />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                domain={[0, 1]}
-                tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
-                tick={{ fontSize: 12 }}
-                stroke="rgba(0,0,0,0.3)"
-                width={50}
-              />
               <Tooltip
                 labelFormatter={(label) => formatDateTime(label as number)}
-                formatter={(value: unknown, name: unknown) => {
-                  const v = value as number
-                  const n = name as string
-                  if (n.includes('ratio')) return [`${(v * 100).toFixed(1)}%`, n]
-                  return [formatCores(v), n]
-                }}
+                formatter={(value: unknown, name: unknown) => [formatCores(value as number), name as string]}
               />
               <Legend />
-              <Area yAxisId="left" type="monotone" dataKey="Process CPU (cores)" stroke={CHART_COLORS[0]} fill={CHART_COLORS[0]} fillOpacity={0.15} strokeWidth={2} />
-              <Area yAxisId="right" type="monotone" dataKey="System CPU (ratio)" stroke={CHART_COLORS[1]} fill="none" strokeWidth={2} strokeDasharray="5 5" />
+              <Area type="monotone" dataKey="Process CPU (cores)" stroke={CHART_COLORS[0]} fill={CHART_COLORS[0]} fillOpacity={0.15} strokeWidth={2} />
+              <Area type="monotone" dataKey="System CPU (ratio)" stroke={CHART_COLORS[1]} fill="none" strokeWidth={2} strokeDasharray="5 5" />
             </AreaChart>
           </ResponsiveContainer>
         ) : (

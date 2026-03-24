@@ -110,7 +110,7 @@ export default function ServicesPage() {
   }, [])
 
   useEffect(() => { fetchJaegerServices() }, [fetchJaegerServices])
-  useEffect(() => { if (tab === 1) { fetchServices(); fetchFilters() } }, [tab, fetchServices, fetchFilters])
+  useEffect(() => { fetchServices(); fetchFilters() }, [fetchServices, fetchFilters])
 
   // ── Filtered Jaeger services ──────────────────────────────────
   const filteredJaegerServices = jaegerSearch
@@ -258,13 +258,7 @@ export default function ServicesPage() {
                     key={svc.name}
                     hover
                     sx={{ cursor: 'pointer' }}
-                    onClick={() => {
-                      // Navigate to transactions for this service if registered
-                      const dbSvc = services.find(s => s.name === svc.name)
-                      if (dbSvc) {
-                        navigate(`/transactions?service=${dbSvc.id}&serviceName=${encodeURIComponent(svc.name)}`)
-                      }
-                    }}
+                    onClick={() => navigate(`/services/by-name/${encodeURIComponent(svc.name)}`)}
                   >
                     <TableCell>
                       <Typography fontWeight={600} fontSize="0.875rem" color="primary.main">

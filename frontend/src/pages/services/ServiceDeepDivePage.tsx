@@ -680,9 +680,13 @@ function DependenciesTab({ serviceId }: { serviceId: string }) {
 // ── Main page component ─────────────────────────────────────────────────────
 
 export default function ServiceDeepDivePage() {
-  const { serviceId } = useParams<{ serviceId: string }>()
+  const { serviceId, serviceName: serviceNameParam } = useParams<{ serviceId?: string; serviceName?: string }>()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+
+  // Resolve the lookup key: name-based route takes priority
+  const lookupByName = !!serviceNameParam
+  const lookupKey = serviceNameParam ? decodeURIComponent(serviceNameParam) : serviceId
 
   // Tab state
   const tabParam = searchParams.get('tab') as TabKey | null
@@ -701,7 +705,7 @@ export default function ServiceDeepDivePage() {
   const [loading, setLoading] = useState(true)
 
   // Dynamic breadcrumb label — shows service name once loaded
-  useBreadcrumb(serviceId, data?.serviceName ?? serviceId)
+  useBreadcrumb(serviceNameParam ?? serviceId, data?.serviceName ?? lookupKey)
 
   // Signal toggle
   const [signalSaving, setSignalSaving] = useState(false)
@@ -732,17 +736,19 @@ export default function ServiceDeepDivePage() {
 
   // Fetch deep dive data
   const fetchData = useCallback(async () => {
-    if (!serviceId) return
+    if (!lookupKey) return
     setLoading(true)
     try {
-      const result = await serviceDeepDiveService.getServiceDeepDive(serviceId, { range: selectedRange })
+      const result = lookupByName
+        ? await serviceDeepDiveService.getServiceDeepDiveByName(lookupKey, { range: selectedRange })
+        : await serviceDeepDiveService.getServiceDeepDive(lookupKey, { range: selectedRange })
       setData(result)
     } catch {
       setSnackbar({ open: true, message: 'Failed to load service data', severity: 'error' })
     } finally {
       setLoading(false)
     }
-  }, [serviceId, selectedRange])
+  }, [lookupKey, lookupByName, selectedRange])
 
   useEffect(() => { fetchData() }, [fetchData])
 

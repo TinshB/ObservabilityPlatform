@@ -55,12 +55,24 @@ public class ServiceDeepDiveService {
      * @param rateWindow PromQL rate window (e.g. "5m")
      * @return aggregated deep-dive response
      */
+    public ServiceDeepDiveResponse getDeepDiveByName(String serviceName, Instant start, Instant end,
+                                                      String rateWindow) {
+        ServiceEntity service = serviceRepository.findByName(serviceName)
+                .orElseThrow(() -> new ResourceNotFoundException("Service", serviceName));
+        return buildDeepDive(service, serviceName, start, end, rateWindow);
+    }
+
     public ServiceDeepDiveResponse getDeepDive(UUID serviceId, Instant start, Instant end,
                                                 String rateWindow) {
         ServiceEntity service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service", serviceId.toString()));
 
         String serviceName = service.getName();
+        return buildDeepDive(service, serviceName, start, end, rateWindow);
+    }
+
+    private ServiceDeepDiveResponse buildDeepDive(ServiceEntity service, String serviceName,
+                                                    Instant start, Instant end, String rateWindow) {
 
         // 1. Key metrics from Prometheus
         KeyMetrics keyMetrics = buildKeyMetrics(serviceName, rateWindow);
@@ -87,7 +99,7 @@ public class ServiceDeepDiveService {
                 : "unhealthy";
 
         return ServiceDeepDiveResponse.builder()
-                .serviceId(serviceId.toString())
+                .serviceId(service.getId().toString())
                 .serviceName(serviceName)
                 .environment(service.getEnvironment())
                 .ownerTeam(service.getOwnerTeam())

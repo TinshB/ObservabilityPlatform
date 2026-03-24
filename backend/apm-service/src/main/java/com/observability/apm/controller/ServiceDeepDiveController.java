@@ -33,7 +33,7 @@ public class ServiceDeepDiveController {
     private final ServiceDeepDiveService serviceDeepDiveService;
 
     @GetMapping("/api/v1/services/{serviceId}/deep-dive")
-    @Operation(summary = "Get service deep dive",
+    @Operation(summary = "Get service deep dive by ID",
             description = "Returns an aggregated health overview for a service including " +
                     "current key metrics (latency, error rate, RPS), recent error traces, " +
                     "log volume summary, trace activity, and a composite health score.")
@@ -54,6 +54,30 @@ public class ServiceDeepDiveController {
 
         ServiceDeepDiveResponse result = serviceDeepDiveService.getDeepDive(
                 serviceId, tr.getStart(), tr.getEnd(), tr.getRateWindow());
+
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    @GetMapping("/api/v1/services/by-name/{serviceName}/deep-dive")
+    @Operation(summary = "Get service deep dive by name",
+            description = "Same as the ID-based endpoint but looks up the service by name.")
+    public ResponseEntity<ApiResponse<ServiceDeepDiveResponse>> getDeepDiveByName(
+
+            @PathVariable String serviceName,
+
+            @Parameter(description = "Named time range preset (e.g. LAST_1H, LAST_24H). Overrides start/end.")
+            @RequestParam(required = false, defaultValue = "LAST_1H") String range,
+
+            @Parameter(description = "Range start (ISO-8601). Defaults to 1 hour ago.")
+            @RequestParam(required = false) Instant start,
+
+            @Parameter(description = "Range end (ISO-8601). Defaults to now.")
+            @RequestParam(required = false) Instant end) {
+
+        TimeRangeRequest tr = TimeRangeResolver.resolve(range, start, end, 0, null);
+
+        ServiceDeepDiveResponse result = serviceDeepDiveService.getDeepDiveByName(
+                serviceName, tr.getStart(), tr.getEnd(), tr.getRateWindow());
 
         return ResponseEntity.ok(ApiResponse.success(result));
     }
