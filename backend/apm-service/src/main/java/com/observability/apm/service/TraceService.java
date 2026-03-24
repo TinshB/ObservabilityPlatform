@@ -57,7 +57,7 @@ public class TraceService {
         List<TraceSearchResponse.TraceSummary> summaries = new ArrayList<>();
         if (jaegerResponse.getData() != null) {
             for (JaegerTrace trace : jaegerResponse.getData()) {
-                summaries.add(mapToSummary(trace));
+                summaries.add(mapToSummary(trace, service.getName()));
             }
         }
 
@@ -96,7 +96,7 @@ public class TraceService {
 
     // ── Mapping: Jaeger → TraceSummary ────────────────────────────────────────
 
-    private TraceSearchResponse.TraceSummary mapToSummary(JaegerTrace trace) {
+    private TraceSearchResponse.TraceSummary mapToSummary(JaegerTrace trace, String queriedService) {
         List<JaegerSpan> spans = trace.getSpans() != null ? trace.getSpans() : List.of();
         Map<String, JaegerProcess> processes = trace.getProcesses() != null ? trace.getProcesses() : Map.of();
 
@@ -137,37 +137,61 @@ public class TraceService {
                 .sorted()
                 .toList();
 
-        // Extract HTTP fields — try root span first, then search other spans
+        // Extract HTTP fields — prefer spans from the queried service, then root span, then any span
         Integer httpStatusCode = null;
         String httpMethod = null;
         String httpUrl = null;
         String httpRoute = null;
 
-        // Try extracting from root span
-        Map<String, String> httpTags = extractHttpTags(rootSpan);
-        httpMethod = httpTags.get("method");
-        httpUrl = httpTags.get("url");
-        httpRoute = httpTags.get("route");
-        httpStatusCode = httpTags.containsKey("statusCode") ? Integer.parseInt(httpTags.get("statusCode")) : null;
+        // First pass: find the best span from the queried service (the service the user selected)
+        for (JaegerSpan span : spans) {
+            JaegerProcess proc = processes.get(span.getProcessId());
+            String spanService = proc != null ? proc.getServiceName() : "";
+            if (!queriedService.equals(spanService)) continue;
 
-        // If route is missing, search other spans (prefer SERVER spans from root service)
+            Map<String, String> tags = extractHttpTags(span);
+            String route = tags.get("route");
+            if (route != null) {
+                httpRoute = route;
+                httpMethod = tags.get("method");
+                httpUrl = tags.get("url");
+                if (tags.containsKey("statusCode")) {
+                    httpStatusCode = Integer.parseInt(tags.get("statusCode"));
+                }
+                break; // found a span with route from the queried service
+            }
+            // Even without route, capture method if available
+            if (httpMethod == null && tags.containsKey("method")) {
+                httpMethod = tags.get("method");
+                httpUrl = tags.get("url");
+                if (tags.containsKey("statusCode")) {
+                    httpStatusCode = Integer.parseInt(tags.get("statusCode"));
+                }
+            }
+        }
+
+        // Second pass: if no route found from queried service, try root span, then any span
         if (httpRoute == null) {
-            for (JaegerSpan span : spans) {
-                if (span == rootSpan) continue;
-                Map<String, String> spanTags = extractHttpTags(span);
-                String spanRoute = spanTags.get("route");
-                if (spanRoute != null) {
-                    // Prefer spans from the same service as root
-                    JaegerProcess spanProcess = processes.get(span.getProcessId());
-                    String spanService = spanProcess != null ? spanProcess.getServiceName() : "";
-                    httpRoute = spanRoute;
-                    if (httpMethod == null) httpMethod = spanTags.get("method");
-                    if (httpUrl == null) httpUrl = spanTags.get("url");
-                    if (httpStatusCode == null && spanTags.containsKey("statusCode")) {
-                        httpStatusCode = Integer.parseInt(spanTags.get("statusCode"));
+            Map<String, String> rootTags = extractHttpTags(rootSpan);
+            if (rootTags.containsKey("route")) {
+                httpRoute = rootTags.get("route");
+                if (httpMethod == null) httpMethod = rootTags.get("method");
+                if (httpUrl == null) httpUrl = rootTags.get("url");
+                if (httpStatusCode == null && rootTags.containsKey("statusCode")) {
+                    httpStatusCode = Integer.parseInt(rootTags.get("statusCode"));
+                }
+            } else {
+                for (JaegerSpan span : spans) {
+                    Map<String, String> tags = extractHttpTags(span);
+                    if (tags.containsKey("route")) {
+                        httpRoute = tags.get("route");
+                        if (httpMethod == null) httpMethod = tags.get("method");
+                        if (httpUrl == null) httpUrl = tags.get("url");
+                        if (httpStatusCode == null && tags.containsKey("statusCode")) {
+                            httpStatusCode = Integer.parseInt(tags.get("statusCode"));
+                        }
+                        break;
                     }
-                    // If this span is from the root service, stop searching
-                    if (rootService.equals(spanService)) break;
                 }
             }
         }

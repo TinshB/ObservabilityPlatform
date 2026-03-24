@@ -40,7 +40,7 @@ export async function getServiceTransactions(
   serviceId: string,
   params: TransactionSearchParams = {},
 ): Promise<TransactionListResponse> {
-  const searchParams: TraceSearchParams = { limit: 500 }
+  const searchParams: TraceSearchParams = { limit: 1000 }
   if (params.range) searchParams.range = params.range
   if (params.start) searchParams.start = params.start
   if (params.end)   searchParams.end   = params.end
@@ -59,14 +59,13 @@ export async function getServiceTransactions(
     rangeSeconds = rangeMap[params.range] ?? 3600
   }
 
-  // Filter to only traces where rootService matches the selected service
-  const filtered = params.serviceName
-    ? result.traces.filter(t => t.rootService === params.serviceName)
-    : result.traces
+  // No rootService filter needed — Jaeger already returns only traces where
+  // the selected service participates, and the backend extracts HTTP info
+  // from the queried service's spans (not just the root span).
 
   // Group traces by operation key
   const groups = new Map<string, { service: string; traces: typeof result.traces }>()
-  for (const trace of filtered) {
+  for (const trace of result.traces) {
     const key = formatRootOperation(trace)
     if (!groups.has(key)) {
       groups.set(key, { service: trace.rootService, traces: [] })
