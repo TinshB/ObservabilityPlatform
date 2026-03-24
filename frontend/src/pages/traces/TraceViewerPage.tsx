@@ -13,6 +13,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Snackbar,
   Alert,
   Skeleton,
@@ -24,105 +25,25 @@ import {
   MenuItem,
   Popover,
 } from '@mui/material'
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import dayjs, { type Dayjs } from 'dayjs'
-import type { Service, TimeRangePreset, TraceSummary, TraceSearchParams } from '@/types'
+import type { Service, TimeRangePreset, TransactionSummary, TransactionSearchParams } from '@/types'
 import * as serviceService from '@/services/serviceService'
 import * as metricsService from '@/services/metricsService'
 import * as traceService   from '@/services/traceService'
+import { formatDuration } from '@/utils/traceUtils'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
 const DEFAULT_RANGE = 'LAST_1H'
-const DEFAULT_LIMIT = 20
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// ── Sorting ─────────────────────────────────────────────────────────────────
 
-/** Format microseconds to a human-readable duration string. */
-function formatDuration(micros: number): string {
-  if (micros < 1000) return `${micros}µs`
-  if (micros < 1_000_000) return `${(micros / 1000).toFixed(1)}ms`
-  return `${(micros / 1_000_000).toFixed(2)}s`
-}
-
-/** Format ISO timestamp to short locale string. */
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-GB', {
-    month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-  } as Intl.DateTimeFormatOptions)
-}
-
-// ── Duration bar ────────────────────────────────────────────────────────────
-
-function DurationBar({ durationMicros, maxDuration, hasError }: {
-  durationMicros: number
-  maxDuration: number
-  hasError: boolean
-}) {
-  const pct = maxDuration > 0 ? Math.max((durationMicros / maxDuration) * 100, 2) : 2
-
-  return (
-    <Tooltip title={formatDuration(durationMicros)} arrow>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 140 }}>
-        <Box sx={{ flexGrow: 1, position: 'relative' }}>
-          <LinearProgress
-            variant="determinate"
-            value={pct}
-            sx={{
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: 'action.disabledBackground',
-              '& .MuiLinearProgress-bar': {
-                borderRadius: 4,
-                backgroundColor: hasError ? 'error.main' : 'primary.main',
-              },
-            }}
-          />
-        </Box>
-        <Typography
-          variant="caption"
-          sx={{
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: '0.75rem',
-            minWidth: 60,
-            textAlign: 'right',
-          }}
-        >
-          {formatDuration(durationMicros)}
-        </Typography>
-      </Box>
-    </Tooltip>
-  )
-}
-
-// ── Error indicator ─────────────────────────────────────────────────────────
-
-function ErrorIndicator({ errorCount, spanCount }: { errorCount: number; spanCount: number }) {
-  if (errorCount === 0) {
-    return (
-      <Tooltip title="No errors">
-        <CheckCircleOutlineIcon sx={{ fontSize: 18, color: 'success.main' }} />
-      </Tooltip>
-    )
-  }
-  return (
-    <Tooltip title={`${errorCount} error span${errorCount > 1 ? 's' : ''} / ${spanCount} total`}>
-      <Chip
-        icon={<ErrorOutlineIcon sx={{ fontSize: 14 }} />}
-        label={errorCount}
-        size="small"
-        color="error"
-        sx={{ fontWeight: 600, fontSize: '0.75rem' }}
-      />
-    </Tooltip>
-  )
-}
+type TxnSortKey = 'transaction' | 'errorRate' | 'rps' | 'slowest'
+type SortDirection = 'asc' | 'desc'
 
 // ── Main page component ─────────────────────────────────────────────────────
 
@@ -135,34 +56,26 @@ export default function TraceViewerPage() {
   const [servicesLoading, setServicesLoading] = useState(true)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
 
-  // ── Operations (Story 7.3) ──────────────────────────────────────────────
-  const [operations, setOperations]           = useState<string[]>([])
-  const [selectedOperation, setSelectedOperation] = useState<string | null>(null)
-
   // ── Time range ──────────────────────────────────────────────────────────
   const [presets, setPresets]           = useState<TimeRangePreset[]>([])
   const [selectedRange, setSelectedRange] = useState(
     searchParams.get('range') || DEFAULT_RANGE,
   )
 
-  // ── Custom date range (calendar popover — same as Workflow Dashboard) ──
+  // ── Custom date range (calendar popover) ───────────────────────────────
   const [customRange, setCustomRange]       = useState<{ start: Date; end: Date } | null>(null)
   const [timeLabel, setTimeLabel]           = useState('Last 1 hour')
   const [calendarAnchor, setCalendarAnchor] = useState<HTMLElement | null>(null)
   const [pickerStart, setPickerStart]       = useState<Dayjs | null>(null)
   const [pickerEnd, setPickerEnd]           = useState<Dayjs | null>(null)
 
-  // ── Duration filters ────────────────────────────────────────────────────
-  const [minDuration, setMinDuration] = useState(searchParams.get('minDuration') || '')
-  const [maxDuration, setMaxDuration] = useState(searchParams.get('maxDuration') || '')
+  // ── Transaction data ──────────────────────────────────────────────────
+  const [transactions, setTransactions] = useState<TransactionSummary[]>([])
+  const [loading, setLoading]           = useState(false)
 
-  // ── Limit / pagination ──────────────────────────────────────────────────
-  const [limit, setLimit] = useState(DEFAULT_LIMIT)
-
-  // ── Trace data ──────────────────────────────────────────────────────────
-  const [traces, setTraces]     = useState<TraceSummary[]>([])
-  const [total, setTotal]       = useState(0)
-  const [loading, setLoading]   = useState(false)
+  // ── Sorting ───────────────────────────────────────────────────────────
+  const [sortKey, setSortKey] = useState<TxnSortKey | null>(null)
+  const [sortDir, setSortDir] = useState<SortDirection>('desc')
 
   // ── Snackbar ────────────────────────────────────────────────────────────
   const [snackbar, setSnackbar] = useState<{
@@ -210,38 +123,16 @@ export default function TraceViewerPage() {
     loadPresets()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Load operations when service changes ──────────────────────────────
-  useEffect(() => {
+  // ── Fetch transactions ────────────────────────────────────────────────
+  const fetchTransactions = useCallback(async () => {
     if (!selectedService) {
-      setOperations([])
-      setSelectedOperation(null)
-      return
-    }
-
-    let cancelled = false
-    async function loadOps() {
-      try {
-        const ops = await traceService.getServiceOperations(selectedService!.id)
-        if (!cancelled) setOperations(ops)
-      } catch {
-        if (!cancelled) setOperations([])
-      }
-    }
-    loadOps()
-    return () => { cancelled = true }
-  }, [selectedService])
-
-  // ── Fetch traces ──────────────────────────────────────────────────────
-  const fetchTraces = useCallback(async () => {
-    if (!selectedService) {
-      setTraces([])
-      setTotal(0)
+      setTransactions([])
       return
     }
 
     setLoading(true)
     try {
-      const params: TraceSearchParams = { limit }
+      const params: TransactionSearchParams = {}
 
       if (customRange) {
         params.start = customRange.start.toISOString()
@@ -250,25 +141,19 @@ export default function TraceViewerPage() {
         params.range = selectedRange
       }
 
-      if (selectedOperation) params.operation = selectedOperation
-      if (minDuration.trim()) params.minDuration = minDuration.trim()
-      if (maxDuration.trim()) params.maxDuration = maxDuration.trim()
-
-      const result = await traceService.getServiceTraces(selectedService.id, params)
-      setTraces(result.traces)
-      setTotal(result.total)
+      const result = await traceService.getServiceTransactions(selectedService.id, params)
+      setTransactions(result.transactions)
     } catch {
-      setSnackbar({ open: true, message: 'Failed to load traces', severity: 'error' })
-      setTraces([])
-      setTotal(0)
+      setSnackbar({ open: true, message: 'Failed to load transactions', severity: 'error' })
+      setTransactions([])
     } finally {
       setLoading(false)
     }
-  }, [selectedService, selectedOperation, selectedRange, customRange, minDuration, maxDuration, limit])
+  }, [selectedService, selectedRange, customRange])
 
   useEffect(() => {
-    fetchTraces()
-  }, [fetchTraces])
+    fetchTransactions()
+  }, [fetchTransactions])
 
   // ── URL sync ────────────────────────────────────────────────────────────
   const syncUrl = useCallback(
@@ -284,7 +169,6 @@ export default function TraceViewerPage() {
   // ── Handlers ────────────────────────────────────────────────────────────
   const handleServiceChange = (_: unknown, svc: Service | null) => {
     setSelectedService(svc)
-    setSelectedOperation(null)
     syncUrl(svc, selectedRange)
   }
 
@@ -313,22 +197,48 @@ export default function TraceViewerPage() {
 
   const calendarOpen = Boolean(calendarAnchor)
 
-  const handleTraceClick = (traceId: string) => {
-    // Carry service + range context so breadcrumb back-nav preserves filters
+  const handleTransactionClick = (txn: TransactionSummary) => {
     const params = new URLSearchParams()
     if (selectedService) params.set('service', selectedService.id)
-    if (selectedRange) params.set('range', selectedRange)
+    if (customRange) {
+      params.set('start', customRange.start.toISOString())
+      params.set('end', customRange.end.toISOString())
+    } else if (selectedRange) {
+      params.set('range', selectedRange)
+    }
     const qs = params.toString()
-    navigate(`/traces/${encodeURIComponent(traceId)}${qs ? `?${qs}` : ''}`)
+    navigate(`/traces/transactions/${encodeURIComponent(txn.transaction)}${qs ? `?${qs}` : ''}`)
   }
 
-  const handleLoadMore = () => {
-    setLimit((prev) => prev + 20)
+  // ── Sorting ───────────────────────────────────────────────────────────
+  const handleSort = (key: TxnSortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('desc')
+    }
   }
 
-  // Max duration for bar scaling
-  const maxDurationValue = traces.length > 0
-    ? Math.max(...traces.map((t) => t.durationMicros))
+  const sortedTransactions = useMemo(() => {
+    if (!sortKey) return transactions
+    const sorted = [...transactions]
+    sorted.sort((a, b) => {
+      let cmp = 0
+      switch (sortKey) {
+        case 'transaction': cmp = a.transaction.localeCompare(b.transaction); break
+        case 'errorRate':   cmp = a.errorRate - b.errorRate; break
+        case 'rps':         cmp = a.requestsPerSecond - b.requestsPerSecond; break
+        case 'slowest':     cmp = a.slowestDurationMicros - b.slowestDurationMicros; break
+      }
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return sorted
+  }, [transactions, sortKey, sortDir])
+
+  // ── Slowest-bar scaling ────────────────────────────────────────────────
+  const maxSlowest = transactions.length > 0
+    ? Math.max(...transactions.map(t => t.slowestDurationMicros))
     : 1
 
   return (
@@ -378,18 +288,6 @@ export default function TraceViewerPage() {
           )}
         />
 
-        {/* Operation filter (Story 7.3) */}
-        <Autocomplete
-          sx={{ minWidth: 240 }}
-          options={operations}
-          value={selectedOperation}
-          onChange={(_, op) => setSelectedOperation(op)}
-          disabled={!selectedService || operations.length === 0}
-          renderInput={(params) => (
-            <TextField {...params} label="Operation / Endpoint" placeholder="All operations" />
-          )}
-        />
-
         {/* Time range — dropdown + custom calendar */}
         <TextField
           select
@@ -422,34 +320,16 @@ export default function TraceViewerPage() {
             <CalendarMonthIcon />
           </IconButton>
         </Tooltip>
-
-        {/* Duration filters */}
-        <TextField
-          sx={{ width: 120 }}
-          label="Min Duration"
-          placeholder="e.g. 100ms"
-          value={minDuration}
-          onChange={(e) => setMinDuration(e.target.value)}
-          size="small"
-        />
-        <TextField
-          sx={{ width: 120 }}
-          label="Max Duration"
-          placeholder="e.g. 5s"
-          value={maxDuration}
-          onChange={(e) => setMaxDuration(e.target.value)}
-          size="small"
-        />
       </Paper>
 
       {/* ── Content ──────────────────────────────────────────────────────── */}
       {!selectedService ? (
         <Paper variant="outlined" sx={{ p: 6, textAlign: 'center' }}>
           <Typography variant="h6" color="text.secondary" gutterBottom>
-            Select a service to view traces
+            Select a service to view transactions
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Use the service selector above to choose a registered service and explore its distributed traces.
+            Use the service selector above to choose a registered service and explore its transactions.
           </Typography>
         </Paper>
       ) : (
@@ -457,167 +337,196 @@ export default function TraceViewerPage() {
           {/* Results summary */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              {loading ? 'Loading traces...' : `${traces.length} trace${traces.length !== 1 ? 's' : ''} returned`}
-              {total > 0 && !loading && ` (${total} total)`}
+              {loading
+                ? 'Loading transactions...'
+                : `${transactions.length} transaction${transactions.length !== 1 ? 's' : ''} found`}
             </Typography>
           </Box>
 
-          {/* Trace list table */}
+          {/* Transaction list table */}
           <Paper variant="outlined">
-            <TableContainer sx={{ maxHeight: 'calc(100vh - 360px)' }}>
+            <TableContainer sx={{ maxHeight: 'calc(100vh - 320px)' }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 180 }}>Trace ID</TableCell>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 130 }}>Root Service</TableCell>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 160 }}>Root Operation</TableCell>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 140 }}>Start Time</TableCell>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 200 }}>Duration</TableCell>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 70 }} align="center">Spans</TableCell>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 70 }} align="center">Errors</TableCell>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 160 }}>Services</TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: 140 }}>Service Name</TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: 260 }}>
+                      <TableSortLabel
+                        active={sortKey === 'transaction'}
+                        direction={sortKey === 'transaction' ? sortDir : 'desc'}
+                        onClick={() => handleSort('transaction')}
+                      >
+                        Transaction
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: 110 }} align="right">
+                      <TableSortLabel
+                        active={sortKey === 'errorRate'}
+                        direction={sortKey === 'errorRate' ? sortDir : 'desc'}
+                        onClick={() => handleSort('errorRate')}
+                      >
+                        Error Rate
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: 90 }} align="right">
+                      <TableSortLabel
+                        active={sortKey === 'rps'}
+                        direction={sortKey === 'rps' ? sortDir : 'desc'}
+                        onClick={() => handleSort('rps')}
+                      >
+                        RPS
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: 220 }}>
+                      <TableSortLabel
+                        active={sortKey === 'slowest'}
+                        direction={sortKey === 'slowest' ? sortDir : 'desc'}
+                        onClick={() => handleSort('slowest')}
+                      >
+                        Slowest Transaction Time
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: 80 }} align="center">Traces</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loading ? (
-                    Array.from({ length: 8 }).map((_, i) => (
+                    Array.from({ length: 6 }).map((_, i) => (
                       <TableRow key={i}>
-                        <TableCell><Skeleton variant="text" width={120} /></TableCell>
                         <TableCell><Skeleton variant="text" width={100} /></TableCell>
-                        <TableCell><Skeleton variant="text" width={130} /></TableCell>
-                        <TableCell><Skeleton variant="text" width={110} /></TableCell>
+                        <TableCell><Skeleton variant="text" width={200} /></TableCell>
+                        <TableCell align="right"><Skeleton variant="text" width={50} /></TableCell>
+                        <TableCell align="right"><Skeleton variant="text" width={40} /></TableCell>
                         <TableCell><Skeleton variant="rounded" width={180} height={8} /></TableCell>
                         <TableCell align="center"><Skeleton variant="text" width={30} /></TableCell>
-                        <TableCell align="center"><Skeleton variant="circular" width={18} height={18} /></TableCell>
-                        <TableCell><Skeleton variant="text" width={100} /></TableCell>
                       </TableRow>
                     ))
-                  ) : traces.length === 0 ? (
+                  ) : sortedTransactions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
+                      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 6 }}>
                         <Typography variant="body1" color="text.secondary">
-                          No traces found
+                          No transactions found
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                          Try adjusting your filters, time range, or duration thresholds
+                          Try adjusting your time range or selecting a different service
                         </Typography>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    traces.map((trace) => (
-                      <TableRow
-                        key={trace.traceId}
-                        hover
-                        sx={{ cursor: 'pointer' }}
-                        onClick={() => handleTraceClick(trace.traceId)}
-                      >
-                        {/* Trace ID */}
-                        <TableCell
-                          sx={{
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: '0.8rem',
-                            color: 'primary.main',
-                          }}
+                    sortedTransactions.map((txn) => {
+                      const barPct = maxSlowest > 0
+                        ? Math.max((txn.slowestDurationMicros / maxSlowest) * 100, 2)
+                        : 2
+
+                      return (
+                        <TableRow
+                          key={txn.transaction}
+                          hover
+                          sx={{ cursor: 'pointer' }}
+                          onClick={() => handleTransactionClick(txn)}
                         >
-                          <Tooltip title="View trace detail" arrow>
-                            <span>{trace.traceId.substring(0, 16)}...</span>
-                          </Tooltip>
-                        </TableCell>
+                          {/* Service name */}
+                          <TableCell sx={{ fontSize: '0.85rem', fontWeight: 500 }}>
+                            {txn.serviceName}
+                          </TableCell>
 
-                        {/* Root service */}
-                        <TableCell sx={{ fontSize: '0.85rem', fontWeight: 500 }}>
-                          {trace.rootService}
-                        </TableCell>
+                          {/* Transaction */}
+                          <TableCell
+                            sx={{
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '0.8rem',
+                              maxWidth: 360,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <Tooltip title={txn.transaction} arrow>
+                              <span>{txn.transaction}</span>
+                            </Tooltip>
+                          </TableCell>
 
-                        {/* Root operation */}
-                        <TableCell
-                          sx={{
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: '0.8rem',
-                            maxWidth: 220,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          <Tooltip title={trace.rootOperation} arrow>
-                            <span>{trace.rootOperation}</span>
-                          </Tooltip>
-                        </TableCell>
+                          {/* Error rate */}
+                          <TableCell align="right">
+                            <Chip
+                              label={`${txn.errorRate.toFixed(1)}%`}
+                              size="small"
+                              sx={{ fontWeight: 600, fontSize: '0.75rem', minWidth: 52 }}
+                              color={
+                                txn.errorRate > 5 ? 'error'
+                                : txn.errorRate > 1 ? 'warning'
+                                : 'success'
+                              }
+                            />
+                          </TableCell>
 
-                        {/* Start time */}
-                        <TableCell
-                          sx={{
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: '0.8rem',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {formatTime(trace.startTime)}
-                        </TableCell>
+                          {/* RPS */}
+                          <TableCell
+                            align="right"
+                            sx={{
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '0.8rem',
+                            }}
+                          >
+                            {txn.requestsPerSecond < 0.01
+                              ? '< 0.01'
+                              : txn.requestsPerSecond < 1
+                                ? txn.requestsPerSecond.toFixed(2)
+                                : txn.requestsPerSecond.toFixed(1)}
+                          </TableCell>
 
-                        {/* Duration bar */}
-                        <TableCell>
-                          <DurationBar
-                            durationMicros={trace.durationMicros}
-                            maxDuration={maxDurationValue}
-                            hasError={trace.errorCount > 0}
-                          />
-                        </TableCell>
+                          {/* Slowest transaction time — bar + label */}
+                          <TableCell>
+                            <Tooltip title={formatDuration(txn.slowestDurationMicros)} arrow>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 140 }}>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <LinearProgress
+                                    variant="determinate"
+                                    value={barPct}
+                                    sx={{
+                                      height: 8,
+                                      borderRadius: 4,
+                                      backgroundColor: 'action.disabledBackground',
+                                      '& .MuiLinearProgress-bar': {
+                                        borderRadius: 4,
+                                        backgroundColor: txn.errorRate > 5 ? 'error.main' : 'primary.main',
+                                      },
+                                    }}
+                                  />
+                                </Box>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontFamily: '"JetBrains Mono", monospace',
+                                    fontSize: '0.75rem',
+                                    minWidth: 60,
+                                    textAlign: 'right',
+                                  }}
+                                >
+                                  {formatDuration(txn.slowestDurationMicros)}
+                                </Typography>
+                              </Box>
+                            </Tooltip>
+                          </TableCell>
 
-                        {/* Span count */}
-                        <TableCell align="center">
-                          <Typography variant="body2" fontWeight={500}>
-                            {trace.spanCount}
-                          </Typography>
-                        </TableCell>
-
-                        {/* Error indicator */}
-                        <TableCell align="center">
-                          <ErrorIndicator errorCount={trace.errorCount} spanCount={trace.spanCount} />
-                        </TableCell>
-
-                        {/* Services */}
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                            {trace.services.slice(0, 3).map((svc) => (
-                              <Chip
-                                key={svc}
-                                label={svc}
-                                size="small"
-                                variant="outlined"
-                                sx={{ fontSize: '0.7rem', height: 20 }}
-                              />
-                            ))}
-                            {trace.services.length > 3 && (
-                              <Chip
-                                label={`+${trace.services.length - 3}`}
-                                size="small"
-                                sx={{ fontSize: '0.7rem', height: 20 }}
-                              />
-                            )}
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          {/* Trace count */}
+                          <TableCell align="center">
+                            <Typography variant="body2" fontWeight={500}>
+                              {txn.traceCount}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>
             </TableContainer>
-
-            {/* Load more */}
-            {!loading && traces.length > 0 && traces.length >= limit && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                <Button variant="outlined" size="small" onClick={handleLoadMore}>
-                  Load more traces
-                </Button>
-              </Box>
-            )}
           </Paper>
         </>
       )}
 
-      {/* ── Calendar Popover (same as Workflow Dashboard) ─────────────── */}
+      {/* ── Calendar Popover ──────────────────────────────────────────── */}
       <Popover
         open={calendarOpen}
         anchorEl={calendarAnchor}

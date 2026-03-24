@@ -383,14 +383,18 @@ export interface LogEnrichmentValidationResponse {
 // ── Story 7.2: Traces ───────────────────────────────────────────────────────
 
 export interface TraceSummary {
-  traceId:       string
-  rootService:   string
-  rootOperation: string
-  startTime:     string   // ISO-8601
-  durationMicros: number  // microseconds
-  spanCount:     number
-  errorCount:    number
-  services:      string[]
+  traceId:        string
+  rootService:    string
+  rootOperation:  string
+  startTime:      string   // ISO-8601
+  durationMicros: number   // microseconds
+  spanCount:      number
+  errorCount:     number
+  services:       string[]
+  httpStatusCode?: number | null
+  httpMethod?:     string | null
+  httpUrl?:        string | null
+  httpRoute?:      string | null
 }
 
 export interface TraceSearchResponse {
@@ -438,6 +442,29 @@ export interface TraceSearchParams {
   maxDuration?: string
   limit?:       number
   tags?:        string  // JSON format
+}
+
+// ── Transaction aggregation ──────────────────────────────────────────────────
+
+/** Aggregated transaction summary — one row per unique operation/endpoint. */
+export interface TransactionSummary {
+  serviceName:           string
+  transaction:           string   // e.g. "GET /api/users"
+  errorRate:             number   // percentage 0–100
+  requestsPerSecond:     number   // RPS
+  slowestDurationMicros: number   // max duration in microseconds
+  traceCount:            number
+}
+
+export interface TransactionListResponse {
+  transactions: TransactionSummary[]
+  total:        number
+}
+
+export interface TransactionSearchParams {
+  range?: string
+  start?: string   // ISO-8601
+  end?:   string   // ISO-8601
 }
 
 // ── Story 8.1: Span Breakup ──────────────────────────────────────────────────

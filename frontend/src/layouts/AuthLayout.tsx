@@ -272,7 +272,7 @@ export default function AuthLayout() {
             <img
               src="/system_insights_logo.png"
               alt="System Insights"
-              style={{ height: 64, width: 'auto', marginBottom: 8 }}
+              style={{ height: 96, width: 'auto', marginBottom: 12 }}
             />
           </Box>
 

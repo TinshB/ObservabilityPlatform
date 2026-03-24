@@ -30,6 +30,7 @@ import { getLogsByTraceId } from '@/services/logService'
 import SpanBreakupPanel from './SpanBreakupPanel'
 import AiSuggestionsPanel from './AiSuggestionsPanel'
 import { useBreadcrumb } from '@/hooks/useBreadcrumb'
+import { formatDuration } from '@/utils/traceUtils'
 
 // ── Service colour palette ──────────────────────────────────────────────────
 
@@ -60,14 +61,6 @@ function formatLogTime(ts: string): string {
   const d = parseLogTimestamp(ts)
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleString()
-}
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function formatDuration(micros: number): string {
-  if (micros < 1000) return `${micros}µs`
-  if (micros < 1_000_000) return `${(micros / 1000).toFixed(1)}ms`
-  return `${(micros / 1_000_000).toFixed(2)}s`
 }
 
 // ── Span tree building ──────────────────────────────────────────────────────

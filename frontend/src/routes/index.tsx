@@ -29,8 +29,9 @@ const MetricsExplorerPage = lazy(() => import('@/pages/metrics/MetricsExplorerPa
 const LogExplorerPage = lazy(() => import('@/pages/logs/LogExplorerPage'))
 
 // Sprint 7
-const TraceViewerPage  = lazy(() => import('@/pages/traces/TraceViewerPage'))
-const TraceDetailPage  = lazy(() => import('@/pages/traces/TraceDetailPage'))
+const TraceViewerPage        = lazy(() => import('@/pages/traces/TraceViewerPage'))
+const TransactionTracesPage  = lazy(() => import('@/pages/traces/TransactionTracesPage'))
+const TraceDetailPage        = lazy(() => import('@/pages/traces/TraceDetailPage'))
 
 // Sprint 8
 const ServiceDeepDivePage = lazy(() => import('@/pages/services/ServiceDeepDivePage'))
@@ -93,6 +94,7 @@ export default function AppRoutes() {
             <Route path="/metrics" element={<ErrorBoundary><MetricsExplorerPage /></ErrorBoundary>} />
             <Route path="/logs" element={<ErrorBoundary><LogExplorerPage /></ErrorBoundary>} />
             <Route path="/traces" element={<ErrorBoundary><TraceViewerPage /></ErrorBoundary>} />
+            <Route path="/traces/transactions/:operation" element={<ErrorBoundary><TransactionTracesPage /></ErrorBoundary>} />
             <Route path="/traces/:traceId" element={<ErrorBoundary><TraceDetailPage /></ErrorBoundary>} />
             <Route path="/admin/users" element={<ErrorBoundary><UsersPage /></ErrorBoundary>} />
             <Route path="/admin/roles" element={<ErrorBoundary><RolesPage /></ErrorBoundary>} />

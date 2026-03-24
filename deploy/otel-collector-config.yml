@@ -90,7 +90,7 @@ processors:
       - name: probabilistic-sample
         type: probabilistic
         probabilistic:
-          sampling_percentage: 20
+          sampling_percentage: 50
 
 exporters:
 

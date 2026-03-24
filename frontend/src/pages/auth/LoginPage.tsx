@@ -103,7 +103,7 @@ export default function LoginPage() {
 
   return (
     <Box>
-      <Typography variant="h6" fontWeight={600} gutterBottom>
+      <Typography variant="h4" fontWeight={700} gutterBottom>
         Sign In
       </Typography>
 

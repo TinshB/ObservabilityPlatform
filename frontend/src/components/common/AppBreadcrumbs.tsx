@@ -14,6 +14,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   metrics:      'Metrics',
   logs:         'Logs',
   traces:       'Traces',
+  transactions: 'Transactions',
   alerts:       'Alerts',
   history:      'History',
   'sla-rules':  'SLA Rules',
