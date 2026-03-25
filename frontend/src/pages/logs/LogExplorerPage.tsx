@@ -125,8 +125,10 @@ function LogRow({ entry }: { entry: LogEntry }) {
         <TableCell>
           <SeverityChip severity={entry.severity} />
         </TableCell>
-        <TableCell sx={{ fontSize: '0.8rem' }}>
-          {entry.serviceName ?? '—'}
+        <TableCell sx={{ fontSize: '0.8rem', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Tooltip title={entry.serviceName ?? ''} arrow enterDelay={300}>
+            <span>{entry.serviceName ?? '—'}</span>
+          </Tooltip>
         </TableCell>
         <TableCell
           sx={{
@@ -139,11 +141,21 @@ function LogRow({ entry }: { entry: LogEntry }) {
             color: 'text.secondary',
           }}
         >
-          {entry.loggerName
-            ? entry.lineNumber
-              ? `${entry.loggerName}:${entry.lineNumber}`
-              : entry.loggerName
-            : '—'}
+          <Tooltip
+            title={entry.loggerName
+              ? entry.lineNumber ? `${entry.loggerName}:${entry.lineNumber}` : entry.loggerName
+              : ''}
+            arrow
+            enterDelay={300}
+          >
+            <span>
+              {entry.loggerName
+                ? entry.lineNumber
+                  ? `${entry.loggerName}:${entry.lineNumber}`
+                  : entry.loggerName
+                : '—'}
+            </span>
+          </Tooltip>
         </TableCell>
         <TableCell
           sx={{
@@ -152,9 +164,17 @@ function LogRow({ entry }: { entry: LogEntry }) {
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
+            maxWidth: 500,
           }}
         >
-          {entry.body ?? '—'}
+          <Tooltip
+            title={entry.body ?? ''}
+            arrow
+            enterDelay={300}
+            slotProps={{ tooltip: { sx: { maxWidth: 600, fontFamily: '"JetBrains Mono", monospace', fontSize: '0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all' } } }}
+          >
+            <span>{entry.body ?? '—'}</span>
+          </Tooltip>
         </TableCell>
       </TableRow>
 
@@ -282,7 +302,8 @@ function LogRow({ entry }: { entry: LogEntry }) {
                                 whiteSpace: 'nowrap',
                                 verticalAlign: 'top',
                                 color: 'text.secondary',
-                                width: 1,
+                                width: 'auto',
+                                maxWidth: 220,
                                 pr: 2,
                               }}
                             >
