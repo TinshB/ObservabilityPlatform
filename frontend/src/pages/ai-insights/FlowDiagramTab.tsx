@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   Box, Typography, Paper, Button, Chip, TextField, MenuItem,
   Autocomplete, Checkbox, CircularProgress, Alert, Snackbar,
-  Tooltip, IconButton, ToggleButtonGroup, ToggleButton, LinearProgress,
-  Drawer, Divider, Stack,
+  Tooltip, IconButton, LinearProgress,
+  Divider, Stack,
 } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import SaveIcon from '@mui/icons-material/Save'
@@ -21,8 +21,6 @@ import {
   getFlowAnalysis,
   type FlowAnalysisResponse,
   type FlowPattern,
-  type FlowNode,
-  type FlowEdge,
 } from '@/services/flowAnalysisService'
 import PatternDetailPanel from './PatternDetailPanel'
 import ConvertToWorkflowDialog from './ConvertToWorkflowDialog'
@@ -36,15 +34,6 @@ const NODE_COLORS: Record<string, string> = {
   CLOUD_COMPONENT: '#f57c00',
   QUEUE:           '#00897b',
   EXTERNAL:        '#546e7a',
-}
-
-const NODE_ICONS: Record<string, string> = {
-  UI:              '\uf108',  // desktop
-  BACKEND:         '\uf233',  // server
-  DATABASE:        '\uf1c0',  // database
-  CLOUD_COMPONENT: '\uf0c2',  // cloud
-  QUEUE:           '\uf362',  // stream
-  EXTERNAL:        '\uf0ac',  // globe
 }
 
 const TIME_RANGES = [
@@ -265,7 +254,7 @@ export default function FlowDiagramTab() {
         return edgeColor(d.errorRate)
       })
       .attr('stroke-width', (d) => 1.5 + (d.callCount / maxCalls) * 4)
-      .attr('stroke-opacity', (d) => highlightedPattern ? 1 : 0.7)
+      .attr('stroke-opacity', () => highlightedPattern ? 1 : 0.7)
       .attr('marker-end', 'url(#arrowhead)')
 
     // Edge labels

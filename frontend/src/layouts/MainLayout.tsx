@@ -256,7 +256,7 @@ export default function MainLayout() {
       </Box>
 
       <List dense>
-        {NAV_ITEMS.map((item) => navItemButton(item.label, item.icon, item.path, 'comingSoon' in item ? item.comingSoon : undefined))}
+        {NAV_ITEMS.map((item) => navItemButton(item.label, item.icon, item.path, (item as Record<string, unknown>).comingSoon as boolean | undefined))}
       </List>
 
       {isAdmin && (

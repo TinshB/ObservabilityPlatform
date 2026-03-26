@@ -9,7 +9,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import WarningIcon from '@mui/icons-material/Warning'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
-  ResponsiveContainer, Cell, Legend,
+  ResponsiveContainer, Cell,
 } from 'recharts'
 import type { FlowPattern } from '@/services/flowAnalysisService'
 
@@ -145,9 +145,10 @@ export default function PatternDetailPanel({ pattern, onClose, onConvert }: Prop
               <XAxis type="number" unit="ms" />
               <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
               <RTooltip
-                formatter={(value: number, _: string, props: any) =>
-                  [`${value}ms — ${props.payload.method || ''} ${props.payload.path || ''}`, 'Latency']
-                }
+                formatter={(value, _name, props) => {
+                  const payload = (props as any)?.payload
+                  return [`${value}ms — ${payload?.method || ''} ${payload?.path || ''}`, 'Latency']
+                }}
               />
               <Bar dataKey="latencyMs" radius={[0, 4, 4, 0]}>
                 {chartData.map((_, i) => (
