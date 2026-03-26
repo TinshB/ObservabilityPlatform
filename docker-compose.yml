@@ -384,6 +384,7 @@ services:
       - JWT_SECRET=${JWT_SECRET:-bXktc3VwZXItc2VjcmV0LWtleS1mb3Itand0LXRva2VuLXNpZ25pbmctdGhhdC1pcy1sb25nLWVub3VnaC1mb3ItaG1hYy1zaGE1MTI=}
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - PROMETHEUS_URL=http://prometheus:9090
+      - APM_SERVICE_URL=http://apm-service:8082
       - ML_SIDECAR_HOST=python-sidecar
       - ML_SIDECAR_PORT=50051
       - ML_SIDECAR_TIMEOUT=${ML_SIDECAR_TIMEOUT:-30000}
