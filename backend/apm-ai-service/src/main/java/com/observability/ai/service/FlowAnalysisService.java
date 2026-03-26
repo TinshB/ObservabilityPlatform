@@ -190,34 +190,64 @@ public class FlowAnalysisService {
     }
 
     private List<JsonNode> fetchTraces(FlowAnalysisRequestDto request, Map<UUID, String> serviceNameMap) {
-        long startMicros = request.getTimeRangeStart().toInstant().toEpochMilli() * 1000;
-        long endMicros = request.getTimeRangeEnd().toInstant().toEpochMilli() * 1000;
-        int limitPerService = Math.max(50, request.getTraceSampleLimit() / serviceNameMap.size());
+        var startInstant = request.getTimeRangeStart().toInstant();
+        var endInstant = request.getTimeRangeEnd().toInstant();
+        // apm-service caps limit at 100 per call
+        int limitPerService = Math.min(100, Math.max(20, request.getTraceSampleLimit() / serviceNameMap.size()));
 
-        // Collect unique traces across services (deduplicate by traceId)
-        Map<String, JsonNode> traceMap = new LinkedHashMap<>();
+        // Step 1: Collect unique trace IDs from all services (search returns TraceSummary, not full data)
+        Map<String, JsonNode> traceSummaryMap = new LinkedHashMap<>();
 
         for (UUID serviceId : serviceNameMap.keySet()) {
             try {
-                JsonNode traces = apmClient.getTraces(serviceId, request.getOperationFilter(),
-                        startMicros, endMicros, limitPerService, null);
+                JsonNode response = apmClient.getTraces(serviceId, request.getOperationFilter(),
+                        startInstant, endInstant, limitPerService, null);
+
+                // Response is TraceSearchResponse: { traces: [...], total, limit }
+                JsonNode traces = response;
+                if (response.has("traces")) {
+                    traces = response.get("traces");
+                }
+
                 if (traces != null && traces.isArray()) {
-                    for (JsonNode trace : traces) {
-                        String traceId = extractTraceId(trace);
-                        if (traceId != null && !traceMap.containsKey(traceId)) {
-                            traceMap.put(traceId, trace);
+                    for (JsonNode traceSummary : traces) {
+                        String traceId = traceSummary.has("traceId")
+                                ? traceSummary.get("traceId").asText()
+                                : traceSummary.has("traceID") ? traceSummary.get("traceID").asText() : null;
+                        if (traceId != null && !traceSummaryMap.containsKey(traceId)) {
+                            traceSummaryMap.put(traceId, traceSummary);
                         }
                     }
                 }
+                log.debug("Service {}: found {} trace summaries", serviceId, traces != null ? traces.size() : 0);
             } catch (Exception e) {
                 log.warn("Failed to fetch traces for service {}: {}", serviceId, e.getMessage());
             }
         }
 
-        // Cap at sample limit
-        return traceMap.values().stream()
-                .limit(request.getTraceSampleLimit())
-                .toList();
+        log.info("Collected {} unique trace IDs from {} services",
+                traceSummaryMap.size(), serviceNameMap.size());
+
+        // Step 2: Fetch full trace detail (with spans) for each trace ID
+        List<JsonNode> fullTraces = new ArrayList<>();
+        int fetchLimit = Math.min(traceSummaryMap.size(), request.getTraceSampleLimit());
+        int fetched = 0;
+
+        for (String traceId : traceSummaryMap.keySet()) {
+            if (fetched >= fetchLimit) break;
+            try {
+                JsonNode traceDetail = apmClient.getTraceDetail(traceId);
+                if (traceDetail != null && !traceDetail.isNull()) {
+                    fullTraces.add(traceDetail);
+                    fetched++;
+                }
+            } catch (Exception e) {
+                log.debug("Failed to fetch trace detail for {}: {}", traceId, e.getMessage());
+            }
+        }
+
+        log.info("Fetched {} full trace details", fullTraces.size());
+        return fullTraces;
     }
 
     private String extractTraceId(JsonNode trace) {
@@ -251,31 +281,23 @@ public class FlowAnalysisService {
         return flows;
     }
 
+    /**
+     * Extract flow from a TraceDetailResponse (custom DTO, not raw Jaeger).
+     * Each span has: spanId, parentSpanId, serviceName, operationName,
+     * httpMethod, httpUrl, httpStatusCode, hasError, durationMicros, tags (Map).
+     */
     private TraceFlow extractSingleTraceFlow(JsonNode trace, Set<String> selectedNames) {
-        JsonNode spans = trace.has("spans") ? trace.get("spans") : trace;
-        if (!spans.isArray() || spans.isEmpty()) return null;
-
-        // Build process map (processId -> serviceName) from Jaeger format
-        Map<String, String> processMap = new HashMap<>();
-        if (trace.has("processes")) {
-            trace.get("processes").fields().forEachRemaining(entry -> {
-                JsonNode proc = entry.getValue();
-                if (proc.has("serviceName")) {
-                    processMap.put(entry.getKey(), proc.get("serviceName").asText());
-                }
-            });
-        }
+        JsonNode spans = trace.has("spans") ? trace.get("spans") : null;
+        if (spans == null || !spans.isArray() || spans.isEmpty()) return null;
 
         // Build span tree: parentSpanId -> list of child spans
         Map<String, List<JsonNode>> childMap = new HashMap<>();
-        Map<String, JsonNode> spanMap = new HashMap<>();
         JsonNode rootSpan = null;
 
         for (JsonNode span : spans) {
-            String spanId = getSpanField(span, "spanID", "spanId");
-            if (spanId != null) spanMap.put(spanId, span);
+            String spanId = span.path("spanId").asText(null);
+            String parentId = span.path("parentSpanId").asText(null);
 
-            String parentId = findParentSpanId(span);
             if (parentId != null && !parentId.isEmpty()) {
                 childMap.computeIfAbsent(parentId, k -> new ArrayList<>()).add(span);
             } else {
@@ -283,44 +305,41 @@ public class FlowAnalysisService {
             }
         }
 
-        if (rootSpan == null && !spans.isEmpty()) {
-            rootSpan = spans.get(0);
-        }
+        if (rootSpan == null) rootSpan = spans.get(0);
 
         // DFS to build ordered step sequence
         TraceFlow flow = new TraceFlow();
-        flow.traceId = extractTraceId(trace);
+        flow.traceId = trace.path("traceId").asText(null);
         flow.steps = new ArrayList<>();
-        flow.totalDurationMicros = 0;
+        flow.totalDurationMicros = trace.path("durationMicros").asLong(0);
         flow.hasError = false;
 
-        Set<String> visitedServices = new HashSet<>();
-        buildFlowSteps(rootSpan, childMap, processMap, selectedNames, flow, visitedServices);
-
-        // Compute total duration from root span
-        if (rootSpan != null && rootSpan.has("duration")) {
-            flow.totalDurationMicros = rootSpan.get("duration").asLong();
-        }
+        Set<String> visitedSteps = new HashSet<>();
+        buildFlowSteps(rootSpan, childMap, selectedNames, flow, visitedSteps);
 
         return flow;
     }
 
     private void buildFlowSteps(JsonNode span, Map<String, List<JsonNode>> childMap,
-                                 Map<String, String> processMap, Set<String> selectedNames,
+                                 Set<String> selectedNames,
                                  TraceFlow flow, Set<String> visited) {
         if (span == null) return;
 
-        String serviceName = resolveServiceName(span, processMap);
+        // TraceDetailResponse SpanDetail fields
+        String serviceName = span.path("serviceName").asText(null);
         String spanKind = getTagValue(span, "span.kind");
-        String httpMethod = getTagValue(span, "http.method");
+        String httpMethod = span.path("httpMethod").asText(null);
+        String httpUrl = span.path("httpUrl").asText(null);
+        // Also try tags for http.route which is more useful as a pattern
         String httpRoute = getTagValue(span, "http.route");
-        if (httpRoute == null) httpRoute = getTagValue(span, "http.url");
-        String httpStatusStr = getTagValue(span, "http.status_code");
-        boolean isError = "true".equals(getTagValue(span, "error"));
-        long duration = span.has("duration") ? span.get("duration").asLong() : 0;
+        if (httpRoute == null) httpRoute = httpUrl;
+        boolean hasError = span.path("hasError").asBoolean(false);
+        long durationMicros = span.path("durationMicros").asLong(0);
+        int httpStatusCode = span.path("httpStatusCode").asInt(0);
 
-        // Include span if it's a SERVER span from a selected service, or an entry point
-        boolean isServerSpan = "server".equalsIgnoreCase(spanKind) || spanKind == null;
+        // Include span if it's a SERVER span (or no kind) from a selected service
+        boolean isServerSpan = spanKind == null || "server".equalsIgnoreCase(spanKind)
+                || "SERVER".equals(spanKind);
         String stepKey = serviceName + ":" + httpMethod + ":" + httpRoute;
 
         if (serviceName != null && selectedNames.contains(serviceName) && isServerSpan
@@ -329,93 +348,53 @@ public class FlowAnalysisService {
 
             FlowStep step = new FlowStep();
             step.serviceName = serviceName;
-            step.serviceType = inferServiceType(span, processMap);
+            step.serviceType = inferServiceType(span);
             step.httpMethod = httpMethod;
             step.httpPath = httpRoute;
-            step.durationMicros = duration;
-            step.isError = isError;
-            if (httpStatusStr != null) {
-                try { step.httpStatus = Integer.parseInt(httpStatusStr); } catch (NumberFormatException ignored) {}
-            }
+            step.durationMicros = durationMicros;
+            step.isError = hasError;
+            step.httpStatus = httpStatusCode;
             flow.steps.add(step);
-            if (isError) flow.hasError = true;
+            if (hasError) flow.hasError = true;
         }
 
-        // Also detect database / external calls within this span's children
-        String spanId = getSpanField(span, "spanID", "spanId");
+        // Recurse into children
+        String spanId = span.path("spanId").asText(null);
         List<JsonNode> children = childMap.getOrDefault(spanId, Collections.emptyList());
-
-        // Sort children by start time
-        children.sort(Comparator.comparingLong(s -> s.has("startTime") ? s.get("startTime").asLong() : 0));
+        children.sort(Comparator.comparingLong(s -> s.path("startTime").asLong(0)));
 
         for (JsonNode child : children) {
-            buildFlowSteps(child, childMap, processMap, selectedNames, flow, visited);
+            buildFlowSteps(child, childMap, selectedNames, flow, visited);
         }
     }
 
-    private String resolveServiceName(JsonNode span, Map<String, String> processMap) {
-        // Try process map first (Jaeger format)
-        String processId = span.has("processID") ? span.get("processID").asText() : null;
-        if (processId != null && processMap.containsKey(processId)) {
-            return processMap.get(processId);
-        }
-        // Try direct service.name tag
-        String svcName = getTagValue(span, "service.name");
-        if (svcName != null) return svcName;
-        // Try resource attributes
-        if (span.has("process") && span.get("process").has("serviceName")) {
-            return span.get("process").get("serviceName").asText();
-        }
-        return null;
-    }
-
-    private String inferServiceType(JsonNode span, Map<String, String> processMap) {
+    private String inferServiceType(JsonNode span) {
         String dbSystem = getTagValue(span, "db.system");
         if (dbSystem != null) return "DATABASE";
 
         String messagingSystem = getTagValue(span, "messaging.system");
         if (messagingSystem != null) return "QUEUE";
 
-        String rpcSystem = getTagValue(span, "rpc.system");
-        if (rpcSystem != null) return "BACKEND";
-
-        String component = getTagValue(span, "component");
-        if ("net/http".equals(component) || "spring".equals(component)) return "BACKEND";
-
-        // Default
         return "BACKEND";
     }
 
-    private String findParentSpanId(JsonNode span) {
-        if (span.has("references") && span.get("references").isArray()) {
-            for (JsonNode ref : span.get("references")) {
-                if ("CHILD_OF".equals(ref.path("refType").asText())) {
-                    return ref.path("spanID").asText(null);
-                }
-            }
-        }
-        if (span.has("parentSpanId")) return span.get("parentSpanId").asText(null);
-        return null;
-    }
-
-    private String getSpanField(JsonNode span, String... names) {
-        for (String name : names) {
-            if (span.has(name)) return span.get(name).asText();
-        }
-        return null;
-    }
-
+    /**
+     * Get a tag value from the SpanDetail's tags map (Map&lt;String,String&gt;)
+     * or from the Jaeger-style tags array.
+     */
     private String getTagValue(JsonNode span, String key) {
-        if (span.has("tags") && span.get("tags").isArray()) {
-            for (JsonNode tag : span.get("tags")) {
+        JsonNode tags = span.path("tags");
+        // Custom DTO format: tags is a JSON object (Map<String,String>)
+        if (tags.isObject() && tags.has(key)) {
+            return tags.get(key).asText(null);
+        }
+        // Jaeger raw format fallback: tags is an array of {key, type, value}
+        if (tags.isArray()) {
+            for (JsonNode tag : tags) {
                 if (key.equals(tag.path("key").asText())) {
                     return tag.path("value").asText(null);
                 }
             }
-        }
-        // Also check flat attributes
-        if (span.has("attributes") && span.get("attributes").has(key)) {
-            return span.get("attributes").get(key).asText();
         }
         return null;
     }

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.Instant;
 import java.util.*;
 
 /**
@@ -55,15 +56,17 @@ public class ApmServiceClient {
 
     /**
      * Fetch traces for a service within a time range.
+     * The apm-service TraceController expects ISO-8601 Instant strings for start/end
+     * and caps limit at 100.
      */
-    public JsonNode getTraces(UUID serviceId, String operation, long startMicros, long endMicros,
+    public JsonNode getTraces(UUID serviceId, String operation, Instant start, Instant end,
                               int limit, String tags) {
         var builder = UriComponentsBuilder.fromPath("/api/v1/services/" + serviceId + "/traces")
-                .queryParam("start", startMicros)
-                .queryParam("end", endMicros)
-                .queryParam("limit", limit);
-        if (operation != null) builder.queryParam("operation", operation);
-        if (tags != null) builder.queryParam("tags", tags);
+                .queryParam("start", start.toString())
+                .queryParam("end", end.toString())
+                .queryParam("limit", Math.min(limit, 100));
+        if (operation != null && !operation.isBlank()) builder.queryParam("operation", operation);
+        if (tags != null && !tags.isBlank()) builder.queryParam("tags", tags);
         return doGet(builder.toUriString());
     }
 
