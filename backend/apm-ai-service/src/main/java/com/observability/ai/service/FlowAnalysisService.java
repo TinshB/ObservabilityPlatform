@@ -17,6 +17,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.stream.StreamSupport;
 import java.util.stream.Collectors;
 
 /**
@@ -280,6 +281,37 @@ public class FlowAnalysisService {
         }
 
         log.info("Fetched {} full trace details", fullTraces.size());
+
+        // Diagnostic: log structure of first trace to verify field names
+        if (!fullTraces.isEmpty()) {
+            JsonNode first = fullTraces.get(0);
+            log.info("Sample trace structure — traceId: {}, spanCount field: {}, " +
+                            "services field: {}, has spans: {}, spans count: {}",
+                    first.path("traceId").asText("MISSING"),
+                    first.path("spanCount").asText("MISSING"),
+                    first.path("services"),
+                    first.has("spans"),
+                    first.has("spans") ? first.get("spans").size() : 0);
+
+            if (first.has("spans") && first.get("spans").size() > 0) {
+                JsonNode firstSpan = first.get("spans").get(0);
+                log.info("Sample span — serviceName: '{}', operationName: '{}', " +
+                                "httpMethod: '{}', httpUrl: '{}', spanId: '{}', parentSpanId: '{}', " +
+                                "tags type: {}, all fields: {}",
+                        firstSpan.path("serviceName").asText("MISSING"),
+                        firstSpan.path("operationName").asText("MISSING"),
+                        firstSpan.path("httpMethod").asText("MISSING"),
+                        firstSpan.path("httpUrl").asText("MISSING"),
+                        firstSpan.path("spanId").asText("MISSING"),
+                        firstSpan.path("parentSpanId").asText("MISSING"),
+                        firstSpan.has("tags") ? firstSpan.get("tags").getNodeType() : "MISSING",
+                        firstSpan.fieldNames().hasNext() ?
+                                StreamSupport.stream(
+                                    Spliterators.spliteratorUnknownSize(firstSpan.fieldNames(), 0), false)
+                                    .collect(Collectors.joining(", ")) : "none");
+            }
+        }
+
         return fullTraces;
     }
 
