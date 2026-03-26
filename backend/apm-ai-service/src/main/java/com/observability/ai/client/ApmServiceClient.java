@@ -10,6 +10,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
 import java.time.Instant;
 import java.util.*;
 
@@ -25,10 +29,23 @@ public class ApmServiceClient {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
+    /** Holds JWT token for async threads where RequestContext is unavailable. */
+    private static final ThreadLocal<String> AUTH_TOKEN = new ThreadLocal<>();
+
     public ApmServiceClient(@Qualifier("apmServiceRestTemplate") RestTemplate restTemplate,
                             ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+    }
+
+    /** Set the auth token for the current thread (call before async work). */
+    public void setAuthToken(String token) {
+        AUTH_TOKEN.set(token);
+    }
+
+    /** Clear the auth token (call in finally block after async work). */
+    public void clearAuthToken() {
+        AUTH_TOKEN.remove();
     }
 
     // ── Services ─────────────────────────────────────────────────────────────
@@ -172,6 +189,34 @@ public class ApmServiceClient {
         var headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+        // Forward JWT token for inter-service auth
+        String token = resolveAuthToken();
+        if (token != null) {
+            headers.set("Authorization", token);
+        }
         return headers;
+    }
+
+    /**
+     * Resolve JWT token: first try ThreadLocal (for async threads),
+     * then fall back to the current HTTP request context.
+     */
+    private String resolveAuthToken() {
+        // 1. ThreadLocal (set explicitly for async execution)
+        String token = AUTH_TOKEN.get();
+        if (token != null) return token;
+
+        // 2. Current request context (works for synchronous calls)
+        try {
+            var attrs = RequestContextHolder.getRequestAttributes();
+            if (attrs instanceof ServletRequestAttributes servletAttrs) {
+                HttpServletRequest request = servletAttrs.getRequest();
+                return request.getHeader("Authorization");
+            }
+        } catch (Exception e) {
+            log.debug("Could not extract JWT from request context: {}", e.getMessage());
+        }
+        return null;
     }
 }

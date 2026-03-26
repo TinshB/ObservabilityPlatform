@@ -11,6 +11,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -50,8 +54,11 @@ public class FlowAnalysisService {
         entity = analysisRepo.save(entity);
         UUID analysisId = entity.getId();
 
+        // Capture JWT token from current request before going async
+        String authToken = captureAuthToken();
+
         // Fire async analysis
-        runAnalysisAsync(analysisId, request);
+        runAnalysisAsync(analysisId, request, authToken);
 
         return FlowAnalysisStartedDto.builder()
                 .analysisId(analysisId)
@@ -104,7 +111,11 @@ public class FlowAnalysisService {
     // ── Async analysis execution ─────────────────────────────────────────────
 
     @Async
-    public void runAnalysisAsync(UUID analysisId, FlowAnalysisRequestDto request) {
+    public void runAnalysisAsync(UUID analysisId, FlowAnalysisRequestDto request, String authToken) {
+        // Set auth token for this async thread so ApmServiceClient can use it
+        if (authToken != null) {
+            apmClient.setAuthToken(authToken);
+        }
         try {
             log.info("Starting flow analysis {} for {} services",
                     analysisId, request.getServiceIds().size());
@@ -169,7 +180,20 @@ public class FlowAnalysisService {
         } catch (Exception e) {
             log.error("Analysis {} failed: {}", analysisId, e.getMessage(), e);
             markFailed(analysisId, e.getMessage(), 0);
+        } finally {
+            apmClient.clearAuthToken();
         }
+    }
+
+    private String captureAuthToken() {
+        try {
+            var attrs = RequestContextHolder.getRequestAttributes();
+            if (attrs instanceof ServletRequestAttributes servletAttrs) {
+                HttpServletRequest req = servletAttrs.getRequest();
+                return req.getHeader("Authorization");
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 
     // ── Internal trace processing ────────────────────────────────────────────
