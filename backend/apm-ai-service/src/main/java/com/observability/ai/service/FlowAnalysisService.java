@@ -121,14 +121,8 @@ public class FlowAnalysisService {
             log.info("Starting flow analysis {} for {} services",
                     analysisId, request.getServiceIds().size());
 
-            // 1. Resolve service names
+            // 1. Resolve service names (best-effort — may fall back to UUIDs)
             Map<UUID, String> serviceNameMap = resolveServiceNames(request.getServiceIds());
-
-            // Update entity with service names
-            analysisRepo.findById(analysisId).ifPresent(entity -> {
-                entity.setServiceNames(String.join(",", serviceNameMap.values()));
-                analysisRepo.save(entity);
-            });
 
             // 2. Fetch traces from all selected services
             List<JsonNode> allTraces = fetchTraces(request, serviceNameMap);
@@ -139,8 +133,20 @@ public class FlowAnalysisService {
                 return;
             }
 
-            // 3. Extract span sequences and cluster into flow patterns
-            List<TraceFlow> traceFlows = extractTraceFlows(allTraces, serviceNameMap);
+            // 3. Collect actual service names from the traces themselves
+            //    (more reliable than Service Catalog which may return 500)
+            Set<String> traceServiceNames = collectServiceNamesFromTraces(allTraces);
+            log.info("Analysis {}: services found in traces: {}", analysisId, traceServiceNames);
+
+            // Update entity with discovered service names
+            analysisRepo.findById(analysisId).ifPresent(entity -> {
+                entity.setServiceNames(String.join(",", traceServiceNames));
+                analysisRepo.save(entity);
+            });
+
+            // 4. Extract span sequences and cluster into flow patterns
+            //    Use ALL service names from traces (no filtering — traces are already scoped)
+            List<TraceFlow> traceFlows = extractTraceFlows(allTraces, traceServiceNames);
             log.info("Analysis {}: extracted {} trace flows from {} traces",
                     analysisId, traceFlows.size(), allTraces.size());
 
@@ -207,6 +213,37 @@ public class FlowAnalysisService {
     }
 
     // ── Internal trace processing ────────────────────────────────────────────
+
+    /**
+     * Collect all unique service names from the 'services' field of TraceDetailResponse.
+     * This is more reliable than the Service Catalog API.
+     */
+    private Set<String> collectServiceNamesFromTraces(List<JsonNode> traces) {
+        Set<String> names = new LinkedHashSet<>();
+        for (JsonNode trace : traces) {
+            // TraceDetailResponse has a top-level "services" array
+            JsonNode services = trace.path("services");
+            if (services.isArray()) {
+                for (JsonNode svc : services) {
+                    String name = svc.asText(null);
+                    if (name != null && !name.isBlank()) {
+                        names.add(name);
+                    }
+                }
+            }
+            // Also collect from spans directly as fallback
+            JsonNode spans = trace.path("spans");
+            if (spans.isArray()) {
+                for (JsonNode span : spans) {
+                    String sn = span.path("serviceName").asText(null);
+                    if (sn != null && !sn.isBlank()) {
+                        names.add(sn);
+                    }
+                }
+            }
+        }
+        return names;
+    }
 
     private Map<UUID, String> resolveServiceNames(List<UUID> serviceIds) {
         Map<UUID, String> map = new LinkedHashMap<>();
@@ -329,10 +366,10 @@ public class FlowAnalysisService {
      * Extract flow sequences from trace details.
      * A flow is an ordered sequence of service calls within a single trace.
      */
-    private List<TraceFlow> extractTraceFlows(List<JsonNode> traces, Map<UUID, String> selectedServices) {
-        // Build a case-insensitive set of selected service names
+    private List<TraceFlow> extractTraceFlows(List<JsonNode> traces, Set<String> serviceNames) {
+        // Build a case-insensitive set of service names
         Set<String> selectedNamesLower = new HashSet<>();
-        for (String name : selectedServices.values()) {
+        for (String name : serviceNames) {
             selectedNamesLower.add(name.toLowerCase());
         }
 
