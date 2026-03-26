@@ -1,46 +1,35 @@
-import { Box, Typography, Paper, Chip } from '@mui/material'
+import { useState } from 'react'
+import {
+  Box, Typography, Tabs, Tab, Paper,
+} from '@mui/material'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import FlowDiagramTab from './FlowDiagramTab'
 
 export default function AiInsightsPage() {
+  const [tab, setTab] = useState(0)
+
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: 'calc(100vh - 200px)',
-      }}
-    >
-      <Paper
-        elevation={0}
-        sx={{
-          textAlign: 'center',
-          p: 6,
-          maxWidth: 520,
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 3,
-        }}
-      >
-        <AutoAwesomeIcon sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
-        <Chip
-          label="Coming Soon"
-          color="primary"
-          size="small"
-          sx={{ mb: 2, fontWeight: 600 }}
-        />
-        <Typography variant="h4" fontWeight={700} gutterBottom>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+        <AutoAwesomeIcon sx={{ color: 'primary.main' }} />
+        <Typography variant="h5" fontWeight={700}>
           AI Insights
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-          Intelligent anomaly detection, root cause analysis, and predictive
-          alerting — powered by machine learning across your metrics, logs, and
-          traces.
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          This feature is currently under development. Stay tuned!
-        </Typography>
+      </Box>
+
+      <Paper sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Tabs value={tab} onChange={(_, v) => setTab(v)}>
+          <Tab label="Flow Diagram Generator" />
+          <Tab label="Analysis History" />
+        </Tabs>
       </Paper>
+
+      {tab === 0 && <FlowDiagramTab />}
+      {tab === 1 && (
+        <Typography color="text.secondary" sx={{ mt: 4, textAlign: 'center' }}>
+          Analysis history will appear here once you run your first analysis.
+        </Typography>
+      )}
     </Box>
   )
 }

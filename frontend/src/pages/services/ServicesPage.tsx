@@ -197,7 +197,7 @@ export default function ServicesPage() {
       {/* ── Tabs ──────────────────────────────────────────────────── */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
         <Tabs value={tab} onChange={(_, v) => setTab(v)}>
-          <Tab label="Live Services (Jaeger)" />
+          <Tab label="Live Services" />
           <Tab label="Registered Services (DB)" />
         </Tabs>
       </Box>

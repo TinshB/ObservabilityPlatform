@@ -27,6 +27,13 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+# ── APM Service (internal REST calls) ─────────────────────────────────────
+apm:
+  service:
+    base-url: ${APM_SERVICE_URL:http://localhost:8082}
+    connect-timeout-ms: 5000
+    read-timeout-ms: 30000
+
 # ── AI / gRPC sidecar ──────────────────────────────────────────────────────
 ai:
   grpc:

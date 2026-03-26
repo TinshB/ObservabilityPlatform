@@ -83,7 +83,7 @@ const NAV_ITEMS = [
   { label: 'Workflows',     icon: <AccountTreeOutlinedIcon />, path: '/workflows' },
   { label: 'Reports',       icon: <AssessmentIcon />,          path: '/reports' },
   { label: 'Synthetic Monitoring', icon: <NetworkCheckIcon />, path: '/synthetic' },
-  { label: 'AI Insights', icon: <AutoAwesomeIcon />, path: '/ai-insights', comingSoon: true },
+  { label: 'AI Insights', icon: <AutoAwesomeIcon />, path: '/ai-insights' },
 ] as const satisfies readonly { label: string; icon: React.ReactNode; path: string; comingSoon?: boolean }[]
 
 const ADMIN_ITEMS = [

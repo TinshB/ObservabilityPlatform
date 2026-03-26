@@ -62,11 +62,8 @@ const SyntheticMonitoringPage = lazy(() => import('@/pages/synthetic/SyntheticMo
 // Billing (US-BILL-001)
 const BillingPage = lazy(() => import('@/pages/billing/BillingPage'))
 
-// AI Insights (Coming Soon)
+// AI Insights (Sprint 15-16)
 const AiInsightsPage = lazy(() => import('@/pages/ai-insights/AiInsightsPage'))
-
-// Future routes (added as sprints deliver them):
-//  Sprint 15-16: /ai
 
 /** MainLayout + RouteTracer — creates a span per route navigation. */
 function RouteTracerLayout() {
