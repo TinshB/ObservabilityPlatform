@@ -140,7 +140,16 @@ public class FlowAnalysisService {
 
             // 3. Extract span sequences and cluster into flow patterns
             List<TraceFlow> traceFlows = extractTraceFlows(allTraces, serviceNameMap);
+            log.info("Analysis {}: extracted {} trace flows from {} traces",
+                    analysisId, traceFlows.size(), allTraces.size());
+
+            if (traceFlows.isEmpty()) {
+                log.warn("Analysis {}: no trace flows extracted. Check if service names in " +
+                        "Service Catalog match service names in Jaeger traces.", analysisId);
+            }
+
             Map<String, List<TraceFlow>> clustered = clusterByFlowSignature(traceFlows);
+            log.info("Analysis {}: clustered into {} distinct patterns", analysisId, clustered.size());
 
             // 4. Build pattern entities with metrics
             var analysis = analysisRepo.findById(analysisId).orElseThrow();
@@ -285,23 +294,44 @@ public class FlowAnalysisService {
     }
 
     /**
-     * Extract flow sequences from raw Jaeger traces.
+     * Extract flow sequences from trace details.
      * A flow is an ordered sequence of service calls within a single trace.
      */
     private List<TraceFlow> extractTraceFlows(List<JsonNode> traces, Map<UUID, String> selectedServices) {
-        Set<String> selectedNames = new HashSet<>(selectedServices.values());
+        // Build a case-insensitive set of selected service names
+        Set<String> selectedNamesLower = new HashSet<>();
+        for (String name : selectedServices.values()) {
+            selectedNamesLower.add(name.toLowerCase());
+        }
+
         List<TraceFlow> flows = new ArrayList<>();
+        int skippedNoSpans = 0, skippedNoSteps = 0, skippedSingleStep = 0;
+        Set<String> allSpanServiceNames = new HashSet<>();
 
         for (JsonNode trace : traces) {
             try {
-                TraceFlow flow = extractSingleTraceFlow(trace, selectedNames);
-                if (flow != null && flow.steps.size() >= 2) {
+                TraceFlow flow = extractSingleTraceFlow(trace, selectedNamesLower, allSpanServiceNames);
+                if (flow == null) {
+                    skippedNoSpans++;
+                } else if (flow.steps.isEmpty()) {
+                    skippedNoSteps++;
+                } else if (flow.steps.size() < 2) {
+                    // Include single-step flows too — they represent entry points
+                    flows.add(flow);
+                    skippedSingleStep++;
+                } else {
                     flows.add(flow);
                 }
             } catch (Exception e) {
                 log.debug("Failed to extract flow from trace: {}", e.getMessage());
             }
         }
+
+        log.info("Flow extraction: {} traces -> {} flows ({} no-spans, {} no-matching-steps, {} single-step). " +
+                        "Selected services (lowercase): {}. Service names found in spans: {}",
+                traces.size(), flows.size(), skippedNoSpans, skippedNoSteps, skippedSingleStep,
+                selectedNamesLower, allSpanServiceNames);
+
         return flows;
     }
 
@@ -310,16 +340,22 @@ public class FlowAnalysisService {
      * Each span has: spanId, parentSpanId, serviceName, operationName,
      * httpMethod, httpUrl, httpStatusCode, hasError, durationMicros, tags (Map).
      */
-    private TraceFlow extractSingleTraceFlow(JsonNode trace, Set<String> selectedNames) {
+    private TraceFlow extractSingleTraceFlow(JsonNode trace, Set<String> selectedNamesLower,
+                                              Set<String> allSpanServiceNames) {
         JsonNode spans = trace.has("spans") ? trace.get("spans") : null;
         if (spans == null || !spans.isArray() || spans.isEmpty()) return null;
+
+        // Collect all service names from this trace for diagnostics
+        for (JsonNode span : spans) {
+            String sn = span.path("serviceName").asText(null);
+            if (sn != null) allSpanServiceNames.add(sn);
+        }
 
         // Build span tree: parentSpanId -> list of child spans
         Map<String, List<JsonNode>> childMap = new HashMap<>();
         JsonNode rootSpan = null;
 
         for (JsonNode span : spans) {
-            String spanId = span.path("spanId").asText(null);
             String parentId = span.path("parentSpanId").asText(null);
 
             if (parentId != null && !parentId.isEmpty()) {
@@ -339,35 +375,46 @@ public class FlowAnalysisService {
         flow.hasError = false;
 
         Set<String> visitedSteps = new HashSet<>();
-        buildFlowSteps(rootSpan, childMap, selectedNames, flow, visitedSteps);
+        buildFlowSteps(rootSpan, childMap, selectedNamesLower, flow, visitedSteps);
 
         return flow;
     }
 
     private void buildFlowSteps(JsonNode span, Map<String, List<JsonNode>> childMap,
-                                 Set<String> selectedNames,
+                                 Set<String> selectedNamesLower,
                                  TraceFlow flow, Set<String> visited) {
         if (span == null) return;
 
         // TraceDetailResponse SpanDetail fields
         String serviceName = span.path("serviceName").asText(null);
-        String spanKind = getTagValue(span, "span.kind");
         String httpMethod = span.path("httpMethod").asText(null);
         String httpUrl = span.path("httpUrl").asText(null);
-        // Also try tags for http.route which is more useful as a pattern
+        String operationName = span.path("operationName").asText(null);
+        // Try tags for http.route (more useful as a pattern than full URL)
         String httpRoute = getTagValue(span, "http.route");
+        if (httpRoute == null) httpRoute = getTagValue(span, "http.target");
         if (httpRoute == null) httpRoute = httpUrl;
+        // If still null, derive from operationName (often "GET /api/v1/...")
+        if (httpRoute == null && operationName != null && operationName.contains("/")) {
+            httpRoute = operationName.contains(" ")
+                    ? operationName.substring(operationName.indexOf(' ') + 1)
+                    : operationName;
+        }
+        if (httpMethod == null && operationName != null && operationName.contains(" ")) {
+            httpMethod = operationName.substring(0, operationName.indexOf(' '));
+        }
         boolean hasError = span.path("hasError").asBoolean(false);
         long durationMicros = span.path("durationMicros").asLong(0);
         int httpStatusCode = span.path("httpStatusCode").asInt(0);
 
-        // Include span if it's a SERVER span (or no kind) from a selected service
-        boolean isServerSpan = spanKind == null || "server".equalsIgnoreCase(spanKind)
-                || "SERVER".equals(spanKind);
-        String stepKey = serviceName + ":" + httpMethod + ":" + httpRoute;
+        // Case-insensitive service name matching
+        boolean isSelectedService = serviceName != null
+                && selectedNamesLower.contains(serviceName.toLowerCase());
 
-        if (serviceName != null && selectedNames.contains(serviceName) && isServerSpan
-                && !visited.contains(stepKey)) {
+        String stepKey = (serviceName != null ? serviceName.toLowerCase() : "")
+                + ":" + httpMethod + ":" + httpRoute;
+
+        if (isSelectedService && !visited.contains(stepKey)) {
             visited.add(stepKey);
 
             FlowStep step = new FlowStep();
@@ -388,7 +435,7 @@ public class FlowAnalysisService {
         children.sort(Comparator.comparingLong(s -> s.path("startTime").asLong(0)));
 
         for (JsonNode child : children) {
-            buildFlowSteps(child, childMap, selectedNames, flow, visited);
+            buildFlowSteps(child, childMap, selectedNamesLower, flow, visited);
         }
     }
 
