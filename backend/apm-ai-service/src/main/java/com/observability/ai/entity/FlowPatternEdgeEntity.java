@@ -38,7 +38,7 @@ public class FlowPatternEdgeEntity {
     @Builder.Default
     private double errorRate = 0;
 
-    @Column(name = "http_method", length = 10)
+    @Column(name = "http_method", length = 20)
     private String httpMethod;
 
     @Column(name = "http_path", length = 500)

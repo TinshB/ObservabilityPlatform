@@ -470,7 +470,14 @@ public class FlowAnalysisService {
                     : operationName;
         }
         if (httpMethod == null && operationName != null && operationName.contains(" ")) {
-            httpMethod = operationName.substring(0, operationName.indexOf(' '));
+            String candidate = operationName.substring(0, operationName.indexOf(' '));
+            if (isHttpMethod(candidate)) {
+                httpMethod = candidate;
+            }
+        }
+        // Truncate httpMethod to avoid VARCHAR(10) overflow
+        if (httpMethod != null && httpMethod.length() > 10) {
+            httpMethod = httpMethod.substring(0, 10);
         }
         boolean hasError = span.path("hasError").asBoolean(false);
         long durationMicros = span.path("durationMicros").asLong(0);
@@ -516,6 +523,13 @@ public class FlowAnalysisService {
         if (messagingSystem != null) return "QUEUE";
 
         return "BACKEND";
+    }
+
+    private static final Set<String> KNOWN_HTTP_METHODS = Set.of(
+            "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE");
+
+    private boolean isHttpMethod(String value) {
+        return value != null && KNOWN_HTTP_METHODS.contains(value.toUpperCase());
     }
 
     /**

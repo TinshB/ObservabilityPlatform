@@ -31,7 +31,7 @@ public class FlowPatternStepEntity {
     @Column(name = "service_type", nullable = false, length = 50)
     private String serviceType;
 
-    @Column(name = "http_method", length = 10)
+    @Column(name = "http_method", length = 20)
     private String httpMethod;
 
     @Column(name = "path_pattern", length = 500)
