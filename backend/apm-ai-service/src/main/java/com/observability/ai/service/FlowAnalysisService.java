@@ -488,7 +488,8 @@ public class FlowAnalysisService {
                 && selectedNamesLower.contains(serviceName.toLowerCase());
 
         String stepKey = (serviceName != null ? serviceName.toLowerCase() : "")
-                + ":" + httpMethod + ":" + httpRoute;
+                + ":" + (httpMethod != null ? httpMethod.toUpperCase() : "")
+                + ":" + normalizePath(httpRoute);
 
         if (isSelectedService && !visited.contains(stepKey)) {
             visited.add(stepKey);
@@ -577,13 +578,19 @@ public class FlowAnalysisService {
 
     /**
      * Cluster traces by their service call sequence signature.
-     * Signature = ordered list of "service:method:path" for each step.
+     * Signature = ordered list of "service:method:path" for each step,
+     * normalized to avoid false-unique duplicates (case, query params, etc.).
      */
     private Map<String, List<TraceFlow>> clusterByFlowSignature(List<TraceFlow> flows) {
         Map<String, List<TraceFlow>> clusters = new LinkedHashMap<>();
         for (TraceFlow flow : flows) {
             String signature = flow.steps.stream()
-                    .map(s -> s.serviceName + ":" + s.httpMethod + ":" + normalizePath(s.httpPath))
+                    .map(s -> {
+                        String svc = s.serviceName != null ? s.serviceName.toLowerCase() : "";
+                        String method = s.httpMethod != null ? s.httpMethod.toUpperCase() : "";
+                        String path = normalizePath(s.httpPath);
+                        return svc + ":" + method + ":" + path;
+                    })
                     .collect(Collectors.joining(" -> "));
             clusters.computeIfAbsent(signature, k -> new ArrayList<>()).add(flow);
         }
@@ -591,13 +598,22 @@ public class FlowAnalysisService {
     }
 
     /**
-     * Normalize paths by replacing UUID/numeric segments with placeholders.
+     * Normalize paths by stripping query strings and replacing variable segments
+     * (UUIDs, numeric IDs, hex tokens) with placeholders.
      */
     private String normalizePath(String path) {
         if (path == null) return "";
+        // Strip query string and fragment
+        int qIdx = path.indexOf('?');
+        if (qIdx >= 0) path = path.substring(0, qIdx);
+        int fIdx = path.indexOf('#');
+        if (fIdx >= 0) path = path.substring(0, fIdx);
+        // Strip trailing slash (but keep root "/")
+        if (path.length() > 1 && path.endsWith("/")) path = path.substring(0, path.length() - 1);
         return path
-                .replaceAll("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", "{id}")
-                .replaceAll("/\\d+", "/{id}");
+                .replaceAll("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", "{id}")
+                .replaceAll("/\\d+", "/{id}")
+                .replaceAll("/[0-9a-fA-F]{24,}", "/{id}");
     }
 
     // ── Pattern building ─────────────────────────────────────────────────────
