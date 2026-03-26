@@ -102,8 +102,8 @@ export default function FlowDiagramTab() {
 
   // ── Start analysis ───────────────────────────────────────────────────────
   const handleAnalyze = useCallback(async () => {
-    if (selectedServices.length < 2) {
-      setSnackbar({ message: 'Select at least 2 services', severity: 'error' })
+    if (selectedServices.length < 1) {
+      setSnackbar({ message: 'Select at least one service', severity: 'error' })
       return
     }
     setAnalyzing(true)
@@ -486,16 +486,16 @@ export default function FlowDiagramTab() {
               variant="contained"
               startIcon={analyzing ? <CircularProgress size={18} color="inherit" /> : <PlayArrowIcon />}
               onClick={handleAnalyze}
-              disabled={analyzing || selectedServices.length < 2}
+              disabled={analyzing || selectedServices.length < 1}
               sx={{ height: 40 }}
             >
               {analyzing ? 'Analyzing...' : 'Analyze'}
             </Button>
           </Box>
 
-          {selectedServices.length > 0 && selectedServices.length < 2 && (
-            <Typography variant="caption" color="error">
-              Select at least 2 services to start analysis
+          {selectedServices.length === 0 && (
+            <Typography variant="caption" color="text.secondary">
+              Select at least one service to start analysis
             </Typography>
           )}
         </Stack>
@@ -505,7 +505,7 @@ export default function FlowDiagramTab() {
       {analyzing && (
         <Paper sx={{ p: 2, mb: 2 }}>
           <Typography variant="body2" gutterBottom>
-            Analyzing traces across {selectedServices.length} services...
+            Analyzing traces{selectedServices.length === 1 ? ` for ${selectedServices[0].name}` : ` across ${selectedServices.length} services`}...
           </Typography>
           <LinearProgress variant="determinate" value={progress} sx={{ height: 6, borderRadius: 3 }} />
           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>

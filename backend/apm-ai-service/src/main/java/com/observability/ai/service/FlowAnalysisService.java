@@ -522,8 +522,28 @@ public class FlowAnalysisService {
         String messagingSystem = getTagValue(span, "messaging.system");
         if (messagingSystem != null) return "QUEUE";
 
+        // Detect browser / frontend services (OpenTelemetry Web SDK)
+        String sdkLanguage = getTagValue(span, "telemetry.sdk.language");
+        if ("webjs".equals(sdkLanguage)) return "UI";
+
+        String component = getTagValue(span, "component");
+        if (component != null && BROWSER_COMPONENTS.contains(component.toLowerCase())) return "UI";
+
+        // Fallback: check service name for common frontend naming conventions
+        String serviceName = span.path("serviceName").asText("");
+        String nameLower = serviceName.toLowerCase();
+        if (nameLower.contains("frontend") || nameLower.contains("react")
+                || nameLower.contains("-ui") || nameLower.endsWith("-web")
+                || nameLower.equals("ui") || nameLower.equals("web")) {
+            return "UI";
+        }
+
         return "BACKEND";
     }
+
+    private static final Set<String> BROWSER_COMPONENTS = Set.of(
+            "document-load", "user-interaction", "fetch", "xml-http-request",
+            "document-fetch", "resource-fetch", "navigation", "web-vitals");
 
     private static final Set<String> KNOWN_HTTP_METHODS = Set.of(
             "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE");

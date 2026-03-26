@@ -11,7 +11,7 @@ import java.util.UUID;
 @Data
 public class FlowAnalysisRequestDto {
 
-    @NotEmpty(message = "At least 2 services must be selected")
+    @NotEmpty(message = "At least one service must be selected")
     private List<UUID> serviceIds;
 
     @NotNull
